@@ -266,3 +266,17 @@ guessing. Each rule cites its GG 101 source.
   split parts. Only table and glossary parts drop their repeated caption/header; clause parts
   are joined whole (review found the generic version could drop a real line). A clause number
   printed twice in a standard (`#dup2`) is refused as ambiguous rather than merged.
+
+## 2026-10-22: Figures indexed as text (CG 501 Figure 2.5)
+- **A new chunk kind, `figure`**, citable as `[CG 501 Figure 2.5]` (`CG501-Figure-2.5`). Its
+  text is the caption plus the figure's own paragraphs, which DI groups one per box, so a
+  flowchart's questions and outcomes stay together and in a sensible order. Bullets DI read as
+  lone dots become "- " lines. Clauses that mention the figure link to it in `refs`.
+- **Only figures listed in `sources.yaml` (`text_figures`) are indexed.** Word count can't tell
+  a flowchart (242 words) from a road-marking drawing (up to 135 words of labels), and label
+  soup would crowd real clauses out of search. So it's a deliberate per-document choice: the
+  "person classifies the figure" step in docs/CHARTS.md. A listed figure that can't be found
+  is reported in the chunk summary.
+- **Known limit:** arrows aren't captured, so "No to all -> Discharge to ground" reads as
+  adjacent lines rather than an explicit edge. Good enough to retrieve and quote; an answer
+  that needs the exact decision path should cite the figure and say to check it.

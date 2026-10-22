@@ -23,6 +23,10 @@ REGION_SLACK_IN = 0.02  # DI polygons are tight; allow a little slack when testi
 FURNITURE_ROLES = frozenset({"pageHeader", "pageFooter", "pageNumber"})
 HEADING_ROLES = frozenset({"title", "sectionHeading"})
 _PAGE_NUMBER = re.compile(r"^\d{1,3}$")
+_FIGURE_CAPTION = re.compile(r"^Figure\s+\S+\s+[A-Z(]")  # not "Figure 2.5 shows ..."
+# A bullet DI read as a lone ". " or "· " (CG 501 Figure 2.5): at the start or after a space,
+# and before a capital, so "ground. Next", "e.g. the", "5 . 2" and ". . ." are left alone.
+_BULLET = re.compile(r"(?:^|\s)[.·•]\s+(?=[A-Z])")
 
 Box = tuple[float, float, float, float]  # x0, y0, x1, y1
 
@@ -46,7 +50,22 @@ class TableBlock:
     rows: tuple[tuple[str, ...], ...]
 
 
-Item = Line | TableBlock
+@dataclass(frozen=True)
+class FigureBlock:
+    """A figure's own text, one DI paragraph per box or label (e.g. a flowchart's steps).
+
+    Every figure yields one; the chunker indexes only those listed in sources.yaml
+    (`text_figures`), since most figures are drawings whose labels mean little on their own.
+    """
+
+    page: int
+    x: float
+    y: float
+    caption: str | None
+    paragraphs: tuple[str, ...]
+
+
+Item = Line | TableBlock | FigureBlock
 
 
 def _box(polygon: list[float]) -> Box:
@@ -108,6 +127,26 @@ def _table_block(table: dict[str, Any]) -> TableBlock:
     )
 
 
+def _figure_block(figure: dict[str, Any], paragraphs: list[dict[str, Any]]) -> FigureBlock:
+    region = figure["boundingRegions"][0]
+    x0, y0, _, _ = _box(region["polygon"])
+    caption = (figure.get("caption") or {}).get("content", "").strip() or None
+    texts: list[str] = []
+    for element in figure.get("elements", []):
+        kind, _, index = element.rpartition("/")
+        if kind != "/paragraphs" or not index.isdigit():
+            continue
+        paragraph = paragraphs[int(index)]
+        text = paragraph["content"].strip()
+        # The caption is held separately; page furniture inside the box isn't figure text.
+        if text and text != caption and paragraph.get("role") not in FURNITURE_ROLES:
+            texts.append(_BULLET.sub("\n- ", text).strip())
+    # DI often leaves the caption unattached; it's then the figure's first paragraph.
+    if caption is None and texts and _FIGURE_CAPTION.match(texts[0]):
+        caption, texts = texts[0], texts[1:]
+    return FigureBlock(region["pageNumber"], x0, y0, caption, tuple(texts))
+
+
 def _is_furniture_text(text: str) -> bool:
     """Footers and page numbers DI failed to tag (it sometimes merges them into body text)."""
     return bool(_PAGE_NUMBER.match(text)) or parse_footer(text) is not None
@@ -139,6 +178,7 @@ def read_layout(result: dict[str, Any]) -> list[Item]:
     captions = {(f.get("caption") or {}).get("content", "").strip() for f in figures} - {""}
 
     items: list[Item] = [_table_block(t) for t in tables if t.get("boundingRegions")]
+    items += [_figure_block(f, paragraphs) for f in figures if f.get("boundingRegions")]
     for figure in figures:
         if caption := (figure.get("caption") or {}).get("content"):
             x0, y0, _, _ = _box(figure["boundingRegions"][0]["polygon"])

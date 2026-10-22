@@ -27,7 +27,14 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from agent.citations import chunk_id, glossary_id, table_id
+from agent.citations import (
+    CitationError,
+    chunk_id,
+    clean_number,
+    figure_id,
+    glossary_id,
+    table_id,
+)
 from ingest.conventions import (
     DOC_SERIES,
     NAA_COUNTRIES,
@@ -38,7 +45,7 @@ from ingest.conventions import (
     parse_clause_number,
 )
 from ingest.fonts import HeadingLevel, level_lookup, read_bold_rows
-from ingest.layout import Item, Line, TableBlock, read_layout
+from ingest.layout import FigureBlock, Item, Line, TableBlock, read_layout
 from ingest.models import Chunk
 from ingest.sources import Source, load_sources
 
@@ -70,6 +77,9 @@ _TABLE_CAPTION = re.compile(rf"^Table\s+({_TABLE_NUMBER})\s+[A-Z(]")
 _FIGURE_CAPTION = re.compile(rf"^(?:Figure|Equation)\s+{_TABLE_NUMBER}\s+[A-Z(]")
 _NOTE_LABEL = re.compile(r"^NOTE(?:\s+\d+)?$")
 _TABLE_MENTION = re.compile(rf"\bTables?\s+({_TABLE_NUMBER}(?:\s*(?:,|and|&)\s*{_TABLE_NUMBER})*)")
+_FIGURE_MENTION = re.compile(
+    rf"\bFigures?\s+({_TABLE_NUMBER}(?:\s*(?:,|and|&)\s*{_TABLE_NUMBER})*)"
+)
 _CLAUSE_MENTION = re.compile(rf"\b(?:clause|paragraph)s?\s+({_NUMBER})")
 _LIST_SEPARATOR = re.compile(r"\s*(?:,|\band\b|&)\s*")
 # "CD 127 clause 3.2" or "CD 109 [Ref 1.N] Table 2.9": the mention belongs to that document.
@@ -339,21 +349,38 @@ def _markdown_table(header: tuple[str, ...], rows: Iterable[tuple[str, ...]]) ->
     return lines + [row(r) for r in rows]
 
 
-def _refs(
-    text: str, doc: str, own_id: str, clause_ids: set[str], table_ids: set[str]
-) -> tuple[str, ...]:
-    def local(match: re.Match[str]) -> bool:
-        other = _DOC_BEFORE.search(text[: match.start()])
-        return not other or f"{other.group(1)} {other.group(2)}" == doc
+def _is_local(text: str, match: re.Match[str], doc: str) -> bool:
+    """False for "CD 127 clause 3.2": a mention of another standard isn't linked locally."""
+    other = _DOC_BEFORE.search(text[: match.start()])
+    return not other or f"{other.group(1)} {other.group(2)}" == doc
 
-    found = [
-        table_id(doc, n.rstrip("."))
-        for m in _TABLE_MENTION.finditer(text)
-        if local(m)
-        for n in _LIST_SEPARATOR.split(m.group(1))
+
+def _mentioned(pattern: re.Pattern[str], text: str, doc: str, make_id) -> list[str]:
+    """IDs of every local table or figure the text names ("Tables 5.18a and 5.18b")."""
+
+    found = []
+    for m in pattern.finditer(text):
+        if not _is_local(text, m, doc):
+            continue
+        for number in _LIST_SEPARATOR.split(m.group(1)):
+            try:
+                found.append(make_id(doc, number.rstrip(".")))
+            except CitationError:
+                continue  # a number no chunk could have (e.g. "7.5.3N2a")
+    return found
+
+
+def _refs(
+    text: str, doc: str, own_id: str, clause_ids: set[str], linked: set[str]
+) -> tuple[str, ...]:
+    """Clauses, tables and indexed figures this text points to, for the lookup tools."""
+
+    found = _mentioned(_TABLE_MENTION, text, doc, table_id)
+    found += _mentioned(_FIGURE_MENTION, text, doc, figure_id)
+    found += [
+        chunk_id(doc, m.group(1)) for m in _CLAUSE_MENTION.finditer(text) if _is_local(text, m, doc)
     ]
-    found += [chunk_id(doc, m.group(1)) for m in _CLAUSE_MENTION.finditer(text) if local(m)]
-    known = clause_ids | table_ids
+    known = clause_ids | linked
     return tuple(dict.fromkeys(r for r in found if r in known and r != own_id))
 
 
@@ -391,7 +418,8 @@ _LEVELS = {
 }
 
 
-def _clause_chunks(drafts: list[_ClauseDraft], source: Source, table_ids: set[str]) -> list[Chunk]:
+def _clause_chunks(drafts: list[_ClauseDraft], source: Source, linked: set[str]) -> list[Chunk]:
+    """`linked`: IDs of the document's table and figure chunks, which clauses may point to."""
     clause_ids = {chunk_id(source.code, d.number) for d in drafts}
     seen: Counter[str] = Counter()
     chunks = []
@@ -417,7 +445,7 @@ def _clause_chunks(drafts: list[_ClauseDraft], source: Source, table_ids: set[st
                     clause_level=_LEVELS[number.kind],
                     requirement_type=verb,
                     text=part,
-                    refs=_refs(text, source.code, cid, clause_ids, table_ids),
+                    refs=_refs(text, source.code, cid, clause_ids, linked),
                     warnings=tuple(warnings),
                     **common,
                 )
@@ -438,6 +466,50 @@ def _table_chunks(tables: Iterable[_TableDraft], source: Source) -> list[Chunk]:
                 id=cid if k == 1 else f"{cid}#{k}",
                 citation_id=cid,
                 kind="table",
+                text=part,
+                **common,
+            )
+            for k, part in enumerate(parts, start=1)
+        ]
+    return chunks
+
+
+def _figure_number(caption: str | None) -> str | None:
+    """'Figure 2.05 Runoff' -> '2.5' (normalised like citations), None if unreadable."""
+    match = re.match(r"^Figure\s+(\S+)", caption or "")
+    if not match:
+        return None
+    try:
+        return clean_number(match.group(1).rstrip("."))
+    except CitationError:
+        return None
+
+
+def _figure_chunks(figures: Iterable[tuple[FigureBlock, str]], source: Source) -> list[Chunk]:
+    """Chunks for the figures sources.yaml lists in `text_figures` (e.g. a flowchart).
+
+    DI can report one figure as two regions with the same caption; their text is merged into
+    one chunk (first region's page and heading), as continued tables are.
+    """
+    merged: dict[str, tuple[FigureBlock, str, list[str]]] = {}
+    for block, heading_path in figures:
+        number = _figure_number(block.caption)
+        if number not in source.text_figures or not block.paragraphs:
+            continue
+        if number in merged:
+            merged[number][2].extend(block.paragraphs)
+        else:
+            merged[number] = (block, heading_path, list(block.paragraphs))
+    chunks = []
+    for number, (block, heading_path, paragraphs) in merged.items():
+        cid = figure_id(source.code, number)
+        parts = _pack([block.caption, ""], paragraphs)
+        common = _common(source, f"Figure {number}", block.page, heading_path)
+        chunks += [
+            Chunk(
+                id=cid if k == 1 else f"{cid}#{k}",
+                citation_id=cid,
+                kind="figure",
                 text=part,
                 **common,
             )
@@ -468,6 +540,7 @@ def _glossary_chunks(glossary: _Glossary, source: Source) -> list[Chunk]:
 class ChunkStats:
     skipped_table_pages: tuple[int, ...]  # uncaptioned, non-glossary tables, worth a look
     dropped_lines: int  # body text outside any clause
+    missing_text_figures: tuple[str, ...] = ()  # listed in sources.yaml, not found in the PDF
 
 
 def build_chunks_with_stats(
@@ -475,19 +548,30 @@ def build_chunks_with_stats(
 ) -> tuple[list[Chunk], ChunkStats]:
     """`heading_level(page, y, text)` gives 1 or 2 from the PDF's fonts (ingest/fonts.py)."""
     walker = _Walker(_margin_x(items), heading_level)
+    figures: list[tuple[FigureBlock, str]] = []  # with the heading path where they appear
     for index, item in enumerate(items):
         if isinstance(item, TableBlock):
             walker.table(item)
+        elif isinstance(item, FigureBlock):
+            figures.append((item, walker.path))
         else:
-            walker.line(item, items[index + 1 : index + 3])
+            # Figures sit in the stream but aren't text: look past them, or a heading just
+            # above a figure would no longer see the clause number below it.
+            following = [i for i in items[index + 1 : index + 6] if not isinstance(i, FigureBlock)]
+            walker.line(item, following[:2])
     walker._close()
-    table_ids = {table_id(source.code, n) for n in walker.tables}
+    figure_chunks = _figure_chunks(figures, source)
+    linked = {table_id(source.code, n) for n in walker.tables}
+    linked |= {c.citation_id for c in figure_chunks}
     chunks = [
-        *_clause_chunks(walker.clauses, source, table_ids),
+        *_clause_chunks(walker.clauses, source, linked),
         *_table_chunks(walker.tables.values(), source),
+        *figure_chunks,
         *_glossary_chunks(walker.glossary, source),
     ]
-    return chunks, ChunkStats(tuple(walker.skipped_table_pages), walker.dropped_lines)
+    found = {c.label.removeprefix("Figure ") for c in figure_chunks}
+    missing = tuple(n for n in source.text_figures if n not in found)
+    return chunks, ChunkStats(tuple(walker.skipped_table_pages), walker.dropped_lines, missing)
 
 
 def build_chunks(
@@ -510,6 +594,12 @@ def _summary(source: Source, chunks: list[Chunk], stats: ChunkStats) -> str:
         f"{split} split parts, {warned} with warnings | longest ~{longest // CHARS_PER_TOKEN} "
         f"tokens | uncaptioned tables skipped on pages {list(stats.skipped_table_pages)}, "
         f"{stats.dropped_lines} lines outside clauses"
+        + (f" | {kinds['figure']} figures" if kinds["figure"] else "")
+        + (
+            f" | WARNING text_figures not found: {list(stats.missing_text_figures)}"
+            if stats.missing_text_figures
+            else ""
+        )
     )
 
 
@@ -557,6 +647,7 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - file I
         return _show(args.show, CHUNKS_DIR)
 
     CHUNKS_DIR.mkdir(parents=True, exist_ok=True)
+    status = 0
     for source in load_sources():
         if args.codes and source.code not in args.codes:
             continue
@@ -575,7 +666,9 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - file I
         out = CHUNKS_DIR / f"{source.doc_id}.jsonl"
         out.write_text("".join(c.model_dump_json() + "\n" for c in chunks))
         print(_summary(source, chunks, stats))
-    return 0
+        if stats.missing_text_figures:
+            status = 1  # a listed figure vanished (re-parse, typo): fail rather than shrink
+    return status
 
 
 if __name__ == "__main__":  # pragma: no cover

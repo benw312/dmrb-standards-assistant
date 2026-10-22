@@ -165,4 +165,4 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 3. Phase 4: CD 109 equation tools and `get_clause`/`get_table` are built. Next: the CG 501
    flow-path and Fig 9.23N2 tools after Ben's confirmations, then the chart data format and
    tier 2 once charts are digitised.
-4. CG 501 Fig 2.5: index the flowchart's text as a figure chunk.
+4. Phase 3 plumbing (`agent/rag.py`) reading Ben's system prompt from a file.

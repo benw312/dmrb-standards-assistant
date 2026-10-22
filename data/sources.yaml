@@ -3,6 +3,7 @@
 # PDFs live in data/pdfs/ under `filename` and are git-ignored; the url is where to get them.
 # DMRB documents: © Crown copyright, Open Government Licence v3.0.
 # Loading fails while any version is still TODO.
+# text_figures: figures indexed as their own chunk (flowcharts); most figures are drawings.
 
 sources:
   - code: GG 101
@@ -32,3 +33,4 @@ sources:
     revision_date: 2025-09-30
     url: https://www.standardsforhighways.co.uk/  # TODO: document page
     filename: CG 501 Design of highway drainage systems - Version 2.2.0.pdf
+    text_figures: ["2.5"]  # runoff destination flowchart (cl. 2.10.1, 2.12, 3.2)

@@ -190,7 +190,7 @@ def test_unbracketed_references_fail_rather_than_slip_through(text):
     assert check.unbracketed
 
 
-@pytest.mark.parametrize("group", ["[CD 109 Figure 2]", "[CD 109]", "[CD 109 Table]"])
+@pytest.mark.parametrize("group", ["[CD 109 Diagram 2]", "[CD 109]", "[CD 109 Table]"])
 def test_unreadable_bracket_groups_fail(group):
     check = verify_citations(make_answer(f"Max 7% {group}.", ["CD109-5.3.1"]), RETRIEVED)
 
@@ -362,3 +362,14 @@ def test_split_parts_count_as_their_clause_when_retrieved():
 
 def test_lowercase_appendix_clause_in_brackets():
     assert inline_citations("[CD 123 cl. a2.1]") == ("CD123-A2.1",)
+
+
+def test_figure_citations_are_read_and_must_have_been_retrieved():
+    # Figures indexed as text (CG 501 Figure 2.5, a flowchart) are citable like tables.
+    text = "Assess discharge to ground first [CG 501 Figure 2.5]."
+    shown = verify_citations(make_answer(text, ["CG501-Figure-2.5"]), ["CG501-Figure-2.5"])
+    not_shown = verify_citations(make_answer(text, ["CG501-Figure-2.5"]), RETRIEVED)
+
+    assert shown.ok
+    assert not_shown.not_retrieved == ("CG501-Figure-2.5",)
+    assert normalise_citation("cg501-figure-2.5") == "CG501-Figure-2.5"

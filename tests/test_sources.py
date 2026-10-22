@@ -80,3 +80,39 @@ def test_committed_sources_file_is_valid():
     sources = load_sources()
 
     assert {s.code for s in sources} >= {"GG 101", "CD 109"}
+
+
+def test_text_figures_default_to_none_and_are_read_as_strings(tmp_path):
+    from ingest.sources import load_sources
+
+    path = tmp_path / "sources.yaml"
+    path.write_text(
+        "sources:\n"
+        "  - {code: CG 501, title: Drainage, version: Version 2.2.0, revision_date: 2025-09-30,\n"
+        "     url: 'https://example.org', filename: cg501.pdf, text_figures: ['2.5']}\n"
+        "  - {code: CD 109, title: Link design, version: Revision 1, revision_date: 2020-03-01,\n"
+        "     url: 'https://example.org', filename: cd109.pdf}\n"
+    )
+
+    cg501, cd109 = load_sources(path)
+
+    assert cg501.text_figures == ("2.5",) and cd109.text_figures == ()
+
+
+@pytest.mark.parametrize(
+    ("entry", "message"),
+    [("[2.5]", "valid string"), ("['Fig 2']", "text_figures")],
+    ids=["unquoted-yaml-float", "unreadable-number"],
+)
+def test_bad_text_figures_fail_at_load_time(tmp_path, entry, message):
+    from ingest.sources import load_sources
+
+    path = tmp_path / "sources.yaml"
+    path.write_text(
+        "sources:\n"
+        "  - {code: CG 501, title: Drainage, version: Version 2.2.0, revision_date: 2025-09-30,\n"
+        f"     url: 'https://example.org', filename: cg501.pdf, text_figures: {entry}}}\n"
+    )
+
+    with pytest.raises(ValueError, match=message):
+        load_sources(path)

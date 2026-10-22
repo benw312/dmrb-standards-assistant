@@ -91,7 +91,7 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
   - [ ] [CC] Tier 2 chart tools: Fig 7.5.4, Fig 7.5.1, design speed from Fig 2.1 + Table 2.3
   - [ ] [CC] Flagship chain: bendiness/VISI/verge/road type -> design speed -> Table 2.10 values
   - [ ] [Ben] Decide tier 3: CD 123 Fig 2.3.1 junction type (build?), Fig 9.23N2 verge inset
-  - [ ] [CC] CG 501 Fig 2.5 flowchart: index its text as a figure chunk (no tool)
+  - [x] [CC] CG 501 Fig 2.5 flowchart: indexed as figure chunk `CG501-Figure-2.5` (no tool)
 - [ ] [CC] Responses-API function-calling loop: max 6 steps, time budget, JSONL traces, escalate on limit
 - [ ] [Ben] Read traces, decide what to fix
 
