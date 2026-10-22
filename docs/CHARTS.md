@@ -48,7 +48,7 @@ band, then on to Table 2.10's stopping sight distance and radii for that band.
 |---|---|---|---|
 | 11 | CD 123 Fig 2.3.1 | Regions (polygons) on major vs minor road AADT, giving simple / ghost island / single lane dualling / other. Most vertices sit on grid lines, but some edges are sloped and the chart is titled "approximate" | Build it: return the region plus "approximate, based on flows only (cl. 2.3.1)", and flag points near a boundary. cl. 2.3.1 and 2.3.2 are "should" |
 | 12 | CD 109 Fig 9.23N2 (verge-width inset) | Diagonal line of verge width (3.5 / 6.5 / 10.65 m) against V²/R within section B. Only the 10.65 m at V²/R = 3.53 point is stated in text (NOTE to cl. 9.24) | Ben to say how engineers read it. Drop if it's ambiguous |
-| 13 | CG 501 Fig 2.5 | Runoff destination flowchart: yes/no judgement questions ("is it reasonably practicable?"), not numbers | **Don't build a tool.** Its text is currently lost, because lines inside figures are dropped at chunking. Make the flowchart searchable as a figure chunk instead (cl. 2.10.1, 2.12, 3.2 cite it) |
+| 13 | CG 501 Fig 2.5 | Runoff destination flowchart: yes/no judgement questions ("is it reasonably practicable?"), not numbers | **No tool. Done:** indexed as figure chunk `CG501-Figure-2.5`, citable as `[CG 501 Figure 2.5]` and linked from the clauses that cite it. Other flowcharts are added by listing them in `text_figures` in `data/sources.yaml` |
 
 ## Issues found in the standards (for Ben)
 

@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from ingest.chunk import MAX_CHUNK_CHARS, build_chunks
-from ingest.layout import Line, TableBlock
+from ingest.chunk import MAX_CHUNK_CHARS, build_chunks, build_chunks_with_stats
+from ingest.layout import FigureBlock, Line, TableBlock
 from ingest.sources import Source
 
 SOURCE = Source(
@@ -791,3 +791,102 @@ def test_an_unused_caption_does_not_carry_into_the_next_clause():
     chunks = {c.id: c for c in build_chunks(items, CD123, _level)}
 
     assert "CD123-Table-5.20" in chunks and "CD123-Table-5.18a" not in chunks
+
+
+# --- Figures indexed as text (CG 501 Figure 2.5) --------------------------------------------
+
+
+CG501_FIGURES = SOURCE.model_copy(update={"code": "CG 501", "text_figures": ("2.5",)})
+FLOWCHART = FigureBlock(
+    15, 1.4, 2.0, "Figure 2.5 Destination of road runoff", ("Road runoff", "- Is the rate greater?")
+)
+
+
+def _cg501(*items, source=CG501_FIGURES):
+    head = [
+        ln(14, 1.0, "2.", x=M, heading=True),
+        ln(14, 1.0, "Design principles", heading=True),
+        ln(14, 1.5, "2.12", x=M),
+        ln(14, 1.5, "The destination of runoff shall be chosen using Figure 2.5."),
+        ln(14, 1.8, "2.13", x=M),
+        ln(14, 1.8, "Outfalls shall be agreed with CD 127 Figure 2.5 in mind."),
+    ]
+    chunks, stats = build_chunks_with_stats([*head, *items], source)
+    return {c.id: c for c in chunks}, stats
+
+
+def test_a_listed_figure_becomes_a_citable_chunk_that_clauses_link_to():
+    chunks, stats = _cg501(FLOWCHART)
+
+    figure = chunks["CG501-Figure-2.5"]
+    assert figure.kind == "figure" and figure.label == "Figure 2.5"
+    assert (
+        figure.text
+        == "Figure 2.5 Destination of road runoff\n\nRoad runoff\n- Is the rate greater?"
+    )
+    assert figure.heading_path == "2. Design principles"
+    assert chunks["CG501-2.12"].refs == ("CG501-Figure-2.5",)
+    assert chunks["CG501-2.13"].refs == ()  # "CD 127 Figure 2.5" is another standard's figure
+    assert stats.missing_text_figures == ()
+
+
+def test_unlisted_figures_make_no_chunk_and_clauses_do_not_link_to_them():
+    chunks, _ = _cg501(FLOWCHART, source=SOURCE.model_copy(update={"code": "CG 501"}))
+
+    assert "CG501-Figure-2.5" not in chunks
+    assert chunks["CG501-2.12"].refs == ()
+
+
+def test_a_listed_figure_missing_from_the_pdf_is_reported():
+    _, stats = _cg501()
+
+    assert stats.missing_text_figures == ("2.5",)
+
+
+def test_a_heading_above_a_figure_still_sees_the_clause_below_it():
+    # "Obstructions to sight distance" isn't DI-tagged; the figure between it and clause 3.4
+    # must not hide the clause number from the untagged-heading check.
+    items = [
+        ln(19, 1.0, "3.", x=M, heading=True),
+        ln(19, 1.0, "Stopping sight distance", heading=True),
+        ln(19, 1.4, "3.3", x=M),
+        ln(19, 1.4, "SSD shall be measured as shown in Figure 3.1."),
+        ln(19, 2.0, "Obstructions to sight distance"),
+        FigureBlock(19, 1.5, 2.2, "Figure 3.1 Measurement of SSD", ("Eye height",)),
+        ln(19, 5.0, "3.4", x=M),
+        ln(19, 5.0, "Obstructions shall not obscure the sight line."),
+    ]
+
+    chunks = {c.id: c for c in build_chunks(items, SOURCE)}
+
+    assert chunks["CD109-3.4"].heading_path.endswith("> Obstructions to sight distance")
+    assert "Obstructions to sight distance" not in chunks["CD109-3.3"].text
+
+
+def test_two_regions_with_one_figure_caption_merge_into_one_chunk():
+    second = FigureBlock(
+        16, 1.4, 1.0, "Figure 2.5 Destination of road runoff", ("Discharge to sewer",)
+    )
+
+    chunks, _ = _cg501(FLOWCHART, second)
+
+    figures = [c for c in chunks.values() if c.kind == "figure"]
+    assert [c.id for c in figures] == ["CG501-Figure-2.5"]
+    assert figures[0].text.endswith("- Is the rate greater?\nDischarge to sewer")
+    assert figures[0].page == 15
+
+
+def test_listed_figure_numbers_are_normalised_and_suffixes_are_readable():
+    source = SOURCE.model_copy(update={"code": "CG 501"})
+    listed = type(source).model_validate(
+        source.model_dump() | {"text_figures": ["2.05", "7.5.3N2a"]}
+    )
+    note_figure = FigureBlock(
+        34, 1.4, 1.0, "Figure 7.5.3N2a Flow path lengths", ("0.5% Crossfall",)
+    )
+
+    chunks, stats = _cg501(FLOWCHART, note_figure, source=listed)
+
+    assert listed.text_figures == ("2.5", "7.5.3N2a")
+    assert {"CG501-Figure-2.5", "CG501-Figure-7.5.3N2a"} <= set(chunks)
+    assert stats.missing_text_figures == ()

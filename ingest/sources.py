@@ -24,6 +24,9 @@ class Source(BaseModel):
     revision_date: date
     url: HttpUrl
     filename: str
+    # Figures whose text is worth indexing on its own, e.g. a flowchart ("2.5"). Most figures
+    # are drawings, so this is a deliberate per-document choice (see docs/CHARTS.md).
+    text_figures: tuple[str, ...] = ()
 
     @field_validator("code")
     @classmethod
@@ -40,6 +43,18 @@ class Source(BaseModel):
         if not value.strip() or value.strip().upper() == "TODO":
             raise ValueError("version is still TODO: fill it in from standardsforhighways.co.uk")
         return value
+
+    @field_validator("text_figures")
+    @classmethod
+    def figure_numbers_are_readable(cls, numbers: tuple[str, ...]) -> tuple[str, ...]:
+        # Normalised like citations ("2.05" -> "2.5"), so a listed figure matches its caption,
+        # and a number the citation grammar can't read fails here, not mid-chunking.
+        from agent.citations import CitationError, clean_number
+
+        try:
+            return tuple(clean_number(n) for n in numbers)
+        except CitationError as err:
+            raise ValueError(f"text_figures: {err}") from None
 
     @property
     def doc_id(self) -> str:

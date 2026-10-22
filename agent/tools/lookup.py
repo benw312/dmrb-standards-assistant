@@ -58,13 +58,13 @@ class Clause(BaseModel):
     doc_code: str
     version: str
     label: str
-    kind: Literal["clause", "table", "glossary"]
+    kind: Literal["clause", "table", "glossary", "figure"]
     requirement_type: str | None
     heading_path: str
     page: int
     url: str
     text: str
-    refs: tuple[str, ...]  # clauses and tables this one points to, for the next lookup
+    refs: tuple[str, ...]  # clauses, tables and indexed figures it points to, for the next lookup
 
 
 _PART = re.compile(r"#(\d+)$")
@@ -80,8 +80,8 @@ def _part_number(chunk_id: str) -> int:
 def _join_parts(texts: list[str], kind: str) -> str:
     """Reassemble a split chunk.
 
-    Table and glossary parts each repeat the caption and header (up to and including the
-    "| --- |" row, or the caption and blank line for a glossary), which is printed once.
+    Table, glossary and figure parts each repeat the caption and header (up to and including
+    the "| --- |" row, or the caption and blank line otherwise), which is printed once.
     Clause parts are consecutive sentences with nothing repeated, so they're joined as they are.
     """
     if kind == "clause":
@@ -130,7 +130,10 @@ def _citation_id(kwargs: dict[str, object]) -> str:
 
 
 def get_clause(client: SearchAPI, **kwargs: object) -> Clause:
-    """Any clause, table or glossary by citation. Raises ClauseNotFoundError if it isn't indexed."""
+    """Any clause, table, glossary or indexed figure by citation.
+
+    Raises ClauseNotFoundError if it isn't indexed.
+    """
     return _fetch(client, _citation_id(kwargs))
 
 

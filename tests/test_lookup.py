@@ -142,3 +142,16 @@ def test_the_filter_escapes_quotes_as_odata_requires():
 
     assert client.kwargs["filter"] == "citation_id eq 'CD109-O''Neil'"
     assert clause.citation_id == "CD109-O'Neil"
+
+
+def test_a_figure_prints_its_caption_once():
+    caption = "Figure 2.5 Destination of road runoff\n\n"
+    parts = [
+        _doc("CG501-Figure-2.5", caption + "Road runoff", kind="figure"),
+        _doc("CG501-Figure-2.5#2", caption + "Discharge to ground", kind="figure"),
+    ]
+
+    figure = get_clause(FakeSearch(parts), citation="CG 501 Figure 2.5")
+
+    assert figure.kind == "figure"
+    assert figure.text == caption + "Road runoff\nDischarge to ground"

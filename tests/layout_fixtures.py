@@ -49,12 +49,17 @@ class Layout:
         return self
 
     def figure(self, page: int, y: float, labels: list[str], caption: str | None = None):
+        elements = []
         for i, label in enumerate(labels):
             self.line(page, y + 0.1 + 0.2 * i, label, x=2.0)
+            # DI also groups figure text into paragraphs and lists them as the figure's elements.
+            elements.append(f"/paragraphs/{len(self.paragraphs)}")
+            self.paragraphs.append({"content": label})
         figure: dict[str, Any] = {
             "boundingRegions": [
                 {"pageNumber": page, "polygon": box(1.5, y, 5.0, 0.2 * len(labels) + 0.3)}
-            ]
+            ],
+            "elements": elements,
         }
         if caption:
             figure["caption"] = {"content": caption}

@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ingest.conventions import Verb
 
-ChunkKind = Literal["clause", "table", "glossary"]
+ChunkKind = Literal["clause", "table", "glossary", "figure"]
 ClauseLevel = Literal["requirement", "advice", "section"]
 
 
@@ -14,7 +14,9 @@ class Chunk(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     id: str = Field(description="Unique: the citation ID, plus '#2', '#3' for split parts")
-    citation_id: str = Field(description="What answers cite: CD109-5.3.1, CD109-Table-2.10")
+    citation_id: str = Field(
+        description="What answers cite: CD109-5.3.1, CD109-Table-2.10, CG501-Figure-2.5"
+    )
     doc_code: str  # "CD 109"
     doc_title: str
     version: str  # as printed in the PDF footer, e.g. "Revision 1"

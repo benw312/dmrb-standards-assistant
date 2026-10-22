@@ -32,11 +32,14 @@ class CitationError(ValueError):
 _DOC = re.compile(rf"^\s*({DOC_SERIES})\s?(\d{{3}})\s*,?\s*")
 _NUMBER = re.compile(
     rf"^(?P<naa>(?i:{NAA_PREFIX}))?(?P<letter>(?i:[A-Z])(?:\.(?=\d))?)?"
-    r"(?P<nums>\d+(?:\.\d+)*)(?P<suffix>(?i:N)\d+|[a-zA-Z])?$"
+    r"(?P<nums>\d+(?:\.\d+)*)(?P<suffix>(?i:N)\d*[a-zA-Z]?|[a-zA-Z])?$"
 )
 _TABLE = re.compile(r"^\s*table\s+(\S+?)\s*$", re.IGNORECASE)
+_FIGURE = re.compile(r"^\s*figure\s+(\S+?)\s*$", re.IGNORECASE)
 _GLOSSARY = re.compile(r"^\s*glossary\s*$", re.IGNORECASE)
-_CHUNK_ID = re.compile(rf"^({DOC_SERIES})\s?(\d{{3}})\s*-\s*(?:(TABLE)-(\S+)|(GLOSSARY)|(\S+))$")
+_CHUNK_ID = re.compile(
+    rf"^({DOC_SERIES})\s?(\d{{3}})\s*-\s*(?:(TABLE|FIGURE)-(\S+)|(GLOSSARY)|(\S+))$"
+)
 _CONNECTORS = re.compile(r"\bcl(?:ause)?s?\b\.?|\band\b|[,&]", re.IGNORECASE)
 _BRACKETS = re.compile(r"\[([^\[\]]*)\]")
 # Double-quoted spans are DMRB wording quoted verbatim, which may say "see Table 5.3".
@@ -53,14 +56,24 @@ def _clean_number(raw: str) -> str:
     """'05.3.1A' -> '5.3.1a', 'e/1.1' -> 'E/1.1', 'a2.1' -> 'A2.1': case and zeros don't count."""
     match = _NUMBER.match(raw.strip())
     if not match:
-        raise CitationError(f"{raw!r} is not a clause or table number")
+        raise CitationError(f"{raw!r} is not a clause, table or figure number")
     naa = match["naa"].upper() if match["naa"] else ""
     letter = (match["letter"] or "").upper()
     nums = ".".join(str(int(p)) for p in match["nums"].split("."))
-    suffix = match["suffix"] or ""
-    # 'N2' marks a NOTE's table (Table 6.25N2) and stays upper case; 'a' in 5.3.1a is lower.
-    suffix = suffix.upper() if len(suffix) > 1 else suffix.lower()
-    return f"{naa}{letter}{nums}{suffix}"
+    return f"{naa}{letter}{nums}{_clean_suffix(match['suffix'] or '')}"
+
+
+def _clean_suffix(suffix: str) -> str:
+    """'N2' marks a NOTE's table or figure (Table 6.25N2, Figure 7.5.3N2a): its N stays upper
+    case and any trailing letter is lower. A lone letter is lower: 5.3.1A -> 5.3.1a."""
+    if len(suffix) > 1 and suffix[0] in "nN":
+        return "N" + suffix[1:].lower()
+    return suffix.lower()
+
+
+def clean_number(raw: str) -> str:
+    """Public form of the number normaliser, for config that names clauses or figures."""
+    return _clean_number(raw)
 
 
 def _doc(doc_code: str) -> str:
@@ -77,6 +90,11 @@ def table_id(doc_code: str, number: str) -> str:
     return f"{_doc(doc_code)}-Table-{_clean_number(number)}"
 
 
+def figure_id(doc_code: str, number: str) -> str:
+    """'CG 501', '2.5' -> 'CG501-Figure-2.5'. Only figures indexed as text have chunks."""
+    return f"{_doc(doc_code)}-Figure-{_clean_number(number)}"
+
+
 def glossary_id(doc_code: str) -> str:
     """'CD 109' -> 'CD109-Glossary' (terms, definitions and abbreviations)."""
     return f"{_doc(doc_code)}-Glossary"
@@ -85,6 +103,8 @@ def glossary_id(doc_code: str) -> str:
 def _parse_segment(doc: str, segment: str) -> list[str]:
     if match := _TABLE.match(segment):
         return [table_id(doc, match.group(1).rstrip("."))]
+    if match := _FIGURE.match(segment):
+        return [figure_id(doc, match.group(1).rstrip("."))]
     if _GLOSSARY.match(segment):
         return [glossary_id(doc)]
     # rstrip(".") tolerates a stray full stop: "[CD 109 cl. 5.3.1.]"
@@ -107,7 +127,8 @@ def _parse_group(group: str) -> tuple[str, ...]:
             ids.extend(_parse_segment(doc, segment))
         except CitationError:
             raise CitationError(
-                f"[{group}] is not a citation like [CD 109 cl. 5.3.1] or [CD 109 Table 2.10]"
+                f"[{group}] is not a citation like [CD 109 cl. 5.3.1], [CD 109 Table 2.10] "
+                "or [CG 501 Figure 2.5]"
             ) from None
     return tuple(ids)
 
@@ -116,11 +137,13 @@ def normalise_citation(raw: str) -> str:
     """One citation in either form ('CD109-5.3.1' or 'CD 109 cl. 5.3.1') -> chunk ID."""
     text = raw.strip().strip("[]").strip()
     if match := _CHUNK_ID.match(text.upper()):
-        series, number, is_table, table_number, is_glossary, clause = match.groups()
+        series, number, kind, kind_number, is_glossary, clause = match.groups()
         doc = series + number
         try:
-            if is_table:
-                return table_id(doc, table_number)
+            if kind == "TABLE":
+                return table_id(doc, kind_number)
+            if kind == "FIGURE":
+                return figure_id(doc, kind_number)
             if is_glossary:
                 return glossary_id(doc)
             return chunk_id(doc, clause)

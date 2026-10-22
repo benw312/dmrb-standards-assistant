@@ -1,4 +1,6 @@
-from ingest.layout import Line, TableBlock, read_layout
+import pytest
+
+from ingest.layout import FigureBlock, Line, TableBlock, read_layout
 from tests.layout_fixtures import FOOTER, MARGIN_X, Layout
 
 
@@ -221,3 +223,73 @@ def test_a_span_never_overwrites_a_cell_di_reported():
     (table,) = read_layout(_table_with(cells))
 
     assert table.rows == (("wide", "wide", "own text"),)
+
+
+# --- Figure text (CG 501 Version 2.2.0 Figure 2.5, © Crown copyright, OGL v3.0) ---------------
+
+
+def _figures(layout):
+    return [i for i in read_layout(layout.build()) if isinstance(i, FigureBlock)]
+
+
+def test_a_figure_carries_its_paragraphs_and_caption():
+    layout = Layout().figure(
+        15, 2.0, ["Road runoff", "Discharge to ground"], caption="Figure 2.5 Runoff"
+    )
+
+    (figure,) = _figures(layout)
+
+    assert figure.caption == "Figure 2.5 Runoff"
+    assert figure.paragraphs == ("Road runoff", "Discharge to ground")
+    assert figure.page == 15
+
+
+def test_an_unattached_caption_is_taken_from_the_first_paragraph():
+    layout = Layout().figure(15, 2.0, ["Figure 2.5 Destination of road runoff", "Road runoff"])
+
+    (figure,) = _figures(layout)
+
+    assert figure.caption == "Figure 2.5 Destination of road runoff"
+    assert figure.paragraphs == ("Road runoff",)
+
+
+def test_bullets_read_as_lone_dots_become_list_lines_but_full_stops_stay():
+    text = ". Is it practicable? . Would pumping be required? Ends here. Next sentence."
+    layout = Layout().figure(15, 2.0, [text], caption="Figure 2.5 Runoff")
+
+    (figure,) = _figures(layout)
+
+    assert figure.paragraphs == (
+        "- Is it practicable?\n- Would pumping be required? Ends here. Next sentence.",
+    )
+
+
+def test_furniture_and_non_paragraph_elements_are_not_figure_text():
+    layout = Layout().figure(15, 2.0, ["Road runoff"], caption="Figure 2.5 Runoff")
+    data = layout.build()
+    data["paragraphs"].append({"content": "CG 501 Version 2.2.0", "role": "pageHeader"})
+    data["figures"][0]["elements"] += [f"/paragraphs/{len(data['paragraphs']) - 1}", "/tables/0"]
+
+    (figure,) = [i for i in read_layout(data) if isinstance(i, FigureBlock)]
+
+    assert figure.paragraphs == ("Road runoff",)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["Use e.g. the verge. Then stop.", "Q = 5 . 2 m", "wait . . . then", "Ends. next one"],
+)
+def test_text_that_only_looks_like_a_bullet_is_left_alone(text):
+    layout = Layout().figure(15, 2.0, [text], caption="Figure 2.5 Runoff")
+
+    (figure,) = _figures(layout)
+
+    assert figure.paragraphs == (text,)
+
+
+def test_a_first_paragraph_that_mentions_a_figure_is_not_taken_as_its_caption():
+    layout = Layout().figure(15, 2.0, ["Figure 2.5 shows the options", "Road runoff"])
+
+    (figure,) = _figures(layout)
+
+    assert figure.caption is None
