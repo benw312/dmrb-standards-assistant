@@ -40,6 +40,12 @@ _GLOSSARY = re.compile(r"^\s*glossary\s*$", re.IGNORECASE)
 _CHUNK_ID = re.compile(
     rf"^({DOC_SERIES})\s?(\d{{3}})\s*-\s*(?:(TABLE|FIGURE)-(\S+)|(GLOSSARY)|(\S+))$"
 )
+# Segments of one [...] group: ";" always, and "," when a new document, table, figure or
+# glossary follows, as models naturally write [CD 109 cl. 5.1, CD 109 Table 5.1] or
+# [CD 109 cl. 5.1, Table 5.1]. A comma between bare numbers stays a clause list (5.1, 5.2).
+_SEGMENT_BREAK = re.compile(
+    rf";|,(?=\s*(?:(?-i:{DOC_SERIES})\s?\d{{3}}|table\b|figure\b|glossary\b))", re.IGNORECASE
+)
 _CONNECTORS = re.compile(r"\bcl(?:ause)?s?\b\.?|\band\b|[,&]", re.IGNORECASE)
 _BRACKETS = re.compile(r"\[([^\[\]]*)\]")
 # Double-quoted spans are DMRB wording quoted verbatim, which may say "see Table 5.3".
@@ -117,7 +123,7 @@ def _parse_segment(doc: str, segment: str) -> list[str]:
 def _parse_group(group: str) -> tuple[str, ...]:
     """Parse the inside of one [...] group into chunk IDs; raise if any part isn't a citation."""
     ids, doc = [], None
-    for segment in group.split(";"):
+    for segment in _SEGMENT_BREAK.split(group):
         match = _DOC.match(segment)
         if match:
             doc, segment = match.group(1) + match.group(2), segment[match.end() :]
@@ -166,8 +172,45 @@ def _scan_text(text: str) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, 
         except CitationError:
             malformed.append(f"[{group}]")
     prose = _QUOTED.sub(" ", _BRACKETS.sub(" ", text))
-    loose = tuple(m.group(0).strip() for m in _LOOSE_REF.finditer(prose))
-    return tuple(dict.fromkeys(cited)), tuple(malformed), loose
+    cited_ids = tuple(dict.fromkeys(cited))
+    # The prose-mention allowance below is only safe when one document is in play: with two,
+    # "Table 5.1" could mean either, and "CD 123 cl. 5.1" next to [CD 109 cl. 5.1] must fail.
+    cited_docs = {cid.partition("-")[0] for cid in cited_ids}
+    prose_docs = {f"{m.group(1)}{m.group(2)}" for m in _PROSE_DOC.finditer(prose)}
+    single_doc = len(cited_docs) == 1 and prose_docs <= cited_docs
+    loose = []
+    for match in _LOOSE_REF.finditer(prose):
+        ref = match.group(0).strip()
+        if not (single_doc and _also_cited(ref, cited_ids)):
+            loose.append(ref)
+    return cited_ids, tuple(malformed), tuple(loose)
+
+
+_PROSE_DOC = re.compile(rf"\b({DOC_SERIES})\s?(\d{{3}})\b")
+_LOOSE_PARTS = re.compile(
+    r"^(?P<word>cl(?:ause)?s?\.?|para(?:graph)?s?\.?|table|figure|fig\.)\s*(?P<number>\S+)$",
+    re.IGNORECASE,
+)
+
+
+def _also_cited(ref: str, cited_ids: tuple[str, ...]) -> bool:
+    """True when a prose mention ("the values in Table 5.1") names something the answer also
+    cites in brackets ([CD 109 Table 5.1]). Paraphrasing a clause naturally repeats its own
+    references, and those are verified through the bracketed citation. Only applied when the
+    answer cites a single document and names no other in its prose (see _scan_text); anything
+    not cited, and any mention carrying its own document code ("CD 109 5.3.1"), still fails."""
+    match = _LOOSE_PARTS.match(ref)
+    if not match:
+        return False
+    try:
+        number = _clean_number(match["number"].rstrip("."))
+    except CitationError:
+        return False
+    word = match["word"].lower()
+    wanted = f"Table-{number}" if word == "table" else number
+    if word.startswith("fig"):
+        wanted = f"Figure-{number}"
+    return any(cid.partition("-")[2] == wanted for cid in cited_ids)
 
 
 def inline_citations(text: str) -> tuple[str, ...]:
@@ -248,3 +291,22 @@ def verify_citations(answer: Answer, retrieved_ids: Iterable[str]) -> CitationCh
         uncited=not refusal and not cited,
         refusal_cites=refusal and bool(cited or invalid or malformed),
     )
+
+
+_DOC_ID = re.compile(rf"^({DOC_SERIES})(\d{{3}})$")
+
+
+def display_citation(citation_id: str) -> str:
+    """'CD109-4.5' -> '[CD 109 cl. 4.5]': the inline form answers must use, for each chunk ID.
+
+    The inverse of normalise_citation, so the prompt can show the model the exact form to copy.
+    """
+    clean = normalise_citation(citation_id)
+    doc, _, rest = clean.partition("-")
+    code = _DOC_ID.sub(r"\1 \2", doc)
+    for kind in ("Table", "Figure"):
+        if rest.startswith(f"{kind}-"):
+            return f"[{code} {kind} {rest.removeprefix(f'{kind}-')}]"
+    if rest == "Glossary":
+        return f"[{code} Glossary]"
+    return f"[{code} cl. {rest}]"

@@ -154,14 +154,16 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 **Other**
 - [ ] Add each standard's document page URL to `data/sources.yaml` (chunk links currently
   point at the site root).
-- [ ] Phase 3: write the system prompt (rules in the build guide p.5).
+- [ ] Phase 3: write `agent/prompts/system.md` (what to put in it: `agent/prompts/README.md`),
+  then run `uv run python -m agent.rag "<question>"` on 10 questions and judge the answers.
 - [ ] Later: `evals/golden.jsonl` (30–50 questions with answers) for Phase 6.
 
 ### Claude Code: next
 
 1. When the retrieval questions land: run `evals.recall`, fix chunking or the embedding text
    if semantic recall@5 < 80%, put the number in the README.
-2. Phase 3 RAG baseline (`agent/rag.py`) once Ben's system prompt is written.
+2. Phase 3: `agent/rag.py` is built; once Ben's prompt exists, run the 10-question check
+   and the Foundry built-in search-tool variant (needs the Search connection in Foundry).
 3. Phase 4: CD 109 equation tools and `get_clause`/`get_table` are built. Next: the CG 501
    flow-path and Fig 9.23N2 tools after Ben's confirmations, then the chart data format and
    tier 2 once charts are digitised.

@@ -280,3 +280,30 @@ guessing. Each rule cites its GG 101 source.
 - **Known limit:** arrows aren't captured, so "No to all -> Discharge to ground" reads as
   adjacent lines rather than an explicit edge. Good enough to retrieve and quote; an answer
   that needs the exact decision path should cite the figure and say to check it.
+
+## 2026-10-22: Phase 3 RAG baseline (`agent/rag.py`)
+- **Pipeline:** semantic hybrid search for the top 8 chunks, then one structured-output call
+  (`responses.parse` with the `Answer` model), then the citation check in code. A failed check
+  gets one retry with the reasons; a second failure is flagged for human review with every
+  attempt's reasons, and the CLI prints it under an UNVERIFIED banner. A refusal (no parsed
+  output) isn't retried.
+- **The system prompt is split.** Ben owns `agent/prompts/system.md` (domain rules); the code
+  owns `OUTPUT_CONTRACT` (citation format, field meanings), appended after it, because the
+  checker depends on it and the two must not drift. The pipeline refuses to run without
+  Ben's file.
+- **Found by a live plumbing check** (placeholder prompt, not committed):
+  - The model can return schema-valid JSON that breaks `Answer`'s rules (a blank answer).
+    The SDK raises inside `parse`; it's now caught and given the retry instead of crashing.
+  - gpt-5.4-mini writes `[CD 109 cl. 5.1, CD 109 Table 5.1]` with a comma. The citation
+    grammar now treats ", <document>" and ", Table/Figure/Glossary" as a new segment; a comma
+    between bare numbers is still a clause list.
+  - Paraphrasing a clause repeats its own references ("the values in Table 5.1"). A prose
+    mention now passes if the answer also cites that exact item in brackets, but only when
+    the answer cites one document and names no other: code review showed that with two
+    documents, "CD 123 cl. 5.1" next to [CD 109 cl. 5.1] slipped through. Anything not cited
+    still fails.
+  - Asked for superelevation, the model computed 14.0% where Eq 4.2 gives 4.9%. The
+    contract now forbids arithmetic: name the equation and flag for review. Phase 4's
+    `superelevation` tool is the real fix.
+  - "Not covered" answers liked to cite the clauses they ruled out; the contract now says a
+    not_covered answer names none.

@@ -6,8 +6,8 @@
 - semantic: hybrid, then re-ranked by Azure's semantic ranker (the production mode)
 """
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any, Protocol
 
@@ -34,6 +34,7 @@ class Hit:
     citation_id: str
     score: float
     reranker_score: float | None = None
+    fields: Mapping[str, Any] = field(default_factory=dict)  # extra fields asked for in `select`
 
 
 class SearchAPI(Protocol):
@@ -46,6 +47,7 @@ def query_args(
     mode: Mode,
     top: int,
     odata_filter: str | None,
+    select: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Keyword arguments for SearchClient.search. Separate from `search` so tests can see them."""
     if not query.strip():
@@ -55,7 +57,8 @@ def query_args(
     if mode is not Mode.KEYWORD and vector is None:
         raise ValueError(f"{mode} search needs a query vector")
 
-    args: dict[str, Any] = {"top": top, "select": _SELECT, "filter": odata_filter}
+    columns = [*_SELECT, *(f for f in select if f not in _SELECT)]
+    args: dict[str, Any] = {"top": top, "select": columns, "filter": odata_filter}
     if mode is not Mode.VECTOR:
         args["search_text"] = query
     if mode is not Mode.KEYWORD:
@@ -81,13 +84,15 @@ def search(
     mode: Mode = Mode.SEMANTIC,
     top: int = 5,
     odata_filter: str | None = None,
+    select: Sequence[str] = (),
 ) -> list[Hit]:
     """Top `top` hits, best first.
 
+    `select` names extra index fields to return on each hit (e.g. "text", "heading_path").
     `odata_filter` is passed through as-is, e.g. "doc_code eq 'CD 109'". Callers must build it
     from trusted values or escape quotes (' -> ''): it is not a parameterised query.
     """
-    results = client.search(**query_args(query, vector, mode, top, odata_filter))
+    results = client.search(**query_args(query, vector, mode, top, odata_filter, select))
     hits = []
     for doc in results:
         hits.append(
@@ -96,6 +101,7 @@ def search(
                 citation_id=doc["citation_id"],
                 score=doc["@search.score"],
                 reranker_score=doc.get("@search.reranker_score"),
+                fields={f: doc.get(f) for f in select},
             )
         )
         if len(hits) == top:  # the pager can fetch further pages; never need them

@@ -373,3 +373,84 @@ def test_figure_citations_are_read_and_must_have_been_retrieved():
     assert shown.ok
     assert not_shown.not_retrieved == ("CG501-Figure-2.5",)
     assert normalise_citation("cg501-figure-2.5") == "CG501-Figure-2.5"
+
+
+@pytest.mark.parametrize(
+    ("chunk", "shown"),
+    [
+        ("CD109-4.5", "[CD 109 cl. 4.5]"),
+        ("CD109-Table-2.10", "[CD 109 Table 2.10]"),
+        ("CD109-Glossary", "[CD 109 Glossary]"),
+        ("CD123-E/1.1", "[CD 123 cl. E/1.1]"),
+        ("CD123-A2.1", "[CD 123 cl. A2.1]"),
+        ("CD123-Table-6.25N2", "[CD 123 Table 6.25N2]"),
+        ("CG501-Figure-2.5", "[CG 501 Figure 2.5]"),
+        ("CG501-Figure-7.5.3N2a", "[CG 501 Figure 7.5.3N2a]"),
+    ],
+)
+def test_display_citation_is_the_inverse_of_normalise(chunk, shown):
+    from agent.citations import display_citation
+
+    assert display_citation(chunk) == shown
+    assert normalise_citation(shown) == chunk
+
+
+@pytest.mark.parametrize(
+    ("text", "ids"),
+    [
+        ("[CD 109 cl. 5.1, CD 109 Table 5.1]", ("CD109-5.1", "CD109-Table-5.1")),
+        ("[CD 109 cl. 5.1, Table 5.1]", ("CD109-5.1", "CD109-Table-5.1")),
+        ("[CD 109 cl. 5.1, Glossary]", ("CD109-5.1", "CD109-Glossary")),
+        ("[CD 109 cl. 5.1, CD 123 cl. 3.4, 3.5]", ("CD109-5.1", "CD123-3.4", "CD123-3.5")),
+        ("[CD 109 cl. 5.1, 5.2]", ("CD109-5.1", "CD109-5.2")),  # still a clause list
+    ],
+)
+def test_a_comma_before_a_new_document_or_table_starts_a_new_segment(text, ids):
+    # Seen live: gpt-5.4-mini writes mixed groups with commas, not the documented semicolon.
+    assert inline_citations(text) == ids
+
+
+def test_a_prose_mention_of_something_also_cited_is_allowed():
+    # Seen live: paraphrasing cl. 5.1 repeats "Table 5.1" while also citing it in brackets.
+    text = "Gradients shall not exceed the values in Table 5.1 [CD 109 cl. 5.1; CD 109 Table 5.1]."
+    check = verify_citations(
+        make_answer(text, ["CD109-5.1", "CD109-Table-5.1"]), {"CD109-5.1", "CD109-Table-5.1"}
+    )
+
+    assert check.ok
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Gradients follow Table 5.2 [CD 109 cl. 5.1].",  # Table 5.2 isn't cited
+        "See clause 5.1.1 [CD 109 cl. 5.1].",  # a different clause
+        "See CD 109 5.1 [CD 109 cl. 5.1].",  # carries its own document code
+        "See Table 5.1 [CD 109 cl. 5.1].",  # the clause is cited, the table isn't
+    ],
+)
+def test_prose_mentions_of_anything_not_cited_still_fail(text):
+    check = verify_citations(make_answer(text, ["CD109-5.1"]), {"CD109-5.1"})
+
+    assert check.unbracketed
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "[CD 109 Table 5.1] CD 123 Table 5.1 differs.",
+        "[CD 109 cl. 5.1] CD 123 cl. 5.1 sets a different limit.",
+        "[CD 109 cl. 5.1] DMRB cl. 5.1 of CD 123 says otherwise.",
+        "Table 5.1 applies [CD 109 Table 5.1; CD 123 cl. 2.1].",  # two documents cited
+    ],
+)
+def test_prose_mentions_are_never_excused_when_another_document_is_in_play(text):
+    # Found in review: with a second document, "Table 5.1" may be the other one's.
+    retrieved = {"CD109-5.1", "CD109-Table-5.1", "CD123-2.1"}
+    cited = [
+        c for c in ("CD109-5.1", "CD109-Table-5.1", "CD123-2.1") if c in inline_citations(text)
+    ]
+
+    check = verify_citations(make_answer(text, cited), retrieved)
+
+    assert check.unbracketed
