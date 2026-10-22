@@ -91,9 +91,11 @@ class ClauseKind(Enum):
 
 
 # National Application Annex clauses carry a country prefix: E/1.1 (England), NI/1.1
-# (Northern Ireland), as seen in GG 101 and CD 109. Add others when a document shows them.
-NAA_PREFIX = r"(?:E|NI)/"
-_CLAUSE = re.compile(r"^(?:(E|NI)/)?(\d+(?:\.\d+){0,2})\.?$")
+# (Northern Ireland), S/1.1 (Scotland), as seen in GG 101, CD 109 and CG 501. Add others when a
+# document shows them. Appendix clauses carry a letter: A2.1 (CD 123 Appendix A).
+NAA_COUNTRIES = ("E", "NI", "S")
+NAA_PREFIX = rf"(?:{'|'.join(NAA_COUNTRIES)})/"
+_CLAUSE = re.compile(rf"^(?:({'|'.join(NAA_COUNTRIES)})/)?([A-Z])?(\d+(?:\.\d+){{0,2}})\.?$")
 _KIND_BY_LEVEL = {1: ClauseKind.SECTION, 2: ClauseKind.REQUIREMENT, 3: ClauseKind.ADVICE}
 
 
@@ -101,6 +103,7 @@ _KIND_BY_LEVEL = {1: ClauseKind.SECTION, 2: ClauseKind.REQUIREMENT, 3: ClauseKin
 class ClauseNumber:
     naa: str | None
     parts: tuple[int, ...]
+    appendix: str | None = None  # "A" for A2.1
 
     @property
     def kind(self) -> ClauseKind:
@@ -111,10 +114,10 @@ class ClauseNumber:
         """The requirement an advice clause belongs to (GG 101 Appendix B)."""
         if self.kind is not ClauseKind.ADVICE:
             return None
-        return str(ClauseNumber(self.naa, self.parts[:2]))
+        return str(ClauseNumber(self.naa, self.parts[:2], self.appendix))
 
     def __str__(self) -> str:
-        number = ".".join(map(str, self.parts))
+        number = (self.appendix or "") + ".".join(map(str, self.parts))
         return f"{self.naa}/{number}" if self.naa else number
 
 
@@ -122,7 +125,8 @@ def parse_clause_number(raw: str) -> ClauseNumber:
     match = _CLAUSE.match(raw.strip())
     if not match:
         raise ConventionError(f"{raw!r} is not a GG 101 clause number (X, X.X or X.X.X)")
-    return ClauseNumber(match.group(1), tuple(int(p) for p in match.group(2).split(".")))
+    naa, appendix, numbers = match.groups()
+    return ClauseNumber(naa, tuple(int(p) for p in numbers.split(".")), appendix)
 
 
 _EXPECTED_VERBS: dict[ClauseKind, frozenset[Verb]] = {
@@ -137,6 +141,8 @@ def clause_consistency_warning(number: ClauseNumber, verb: Verb) -> str | None:
     A mismatch usually means the parser split or merged clauses wrongly, so it marks a chunk
     for checking by eye rather than rejecting it.
     """
+    if number.appendix:
+        return None  # GG 101 Appendix B defines main-body numbering only
     expected = _EXPECTED_VERBS.get(number.kind)
     if expected is None or verb in expected:
         return None

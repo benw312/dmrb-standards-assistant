@@ -190,7 +190,7 @@ def test_unbracketed_references_fail_rather_than_slip_through(text):
     assert check.unbracketed
 
 
-@pytest.mark.parametrize("group", ["[CD 109 Table 9.9]", "[CD 109 Figure 2]", "[CD 109]"])
+@pytest.mark.parametrize("group", ["[CD 109 Figure 2]", "[CD 109]", "[CD 109 Table]"])
 def test_unreadable_bracket_groups_fail(group):
     check = verify_citations(make_answer(f"Max 7% {group}.", ["CD109-5.3.1"]), RETRIEVED)
 
@@ -311,3 +311,54 @@ def test_unbracketed_reference_is_reported_in_full(text, reported):
     check = verify_citations(make_answer(f"Max [CD 109 cl. 5.3.1]. {text}", ["CD109-5.3.1"]), {})
 
     assert reported in check.unbracketed
+
+
+# --- Tables, glossary, appendices and the Scotland annex -----------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("[CD 109 Table 2.10]", "CD109-Table-2.10"),
+        ("CD109-Table-2.10", "CD109-Table-2.10"),
+        ("cd109-table-2.10", "CD109-Table-2.10"),
+        ("[CD 123 Table 5.18b]", "CD123-Table-5.18b"),
+        ("[GG 101 Table A.1]", "GG101-Table-A.1"),
+        ("[CD 109 Glossary]", "CD109-Glossary"),
+        ("CD109-Glossary", "CD109-Glossary"),
+        ("[CD 123 cl. A2.1]", "CD123-A2.1"),
+        ("cd123-a2.1", "CD123-A2.1"),
+        ("[CG 501 cl. S/1.1]", "CG501-S/1.1"),
+        ("[CD 123 Table 6.25N2]", "CD123-Table-6.25N2"),
+        ("cd123-table-6.25n2", "CD123-Table-6.25N2"),
+    ],
+)
+def test_tables_glossary_appendix_and_scotland_are_citable(raw, expected):
+    assert normalise_citation(raw) == expected
+
+
+def test_table_citation_must_be_retrieved_like_any_other():
+    answer = make_answer("Max 7% [CD 109 Table 9.9].", ["CD109-Table-9.9"])
+
+    assert verify_citations(answer, RETRIEVED).not_retrieved == ("CD109-Table-9.9",)
+
+
+def test_clause_and_table_in_one_group():
+    assert inline_citations("[CD 109 cl. 3.5; Table 3.5]") == ("CD109-3.5", "CD109-Table-3.5")
+
+
+def test_table_and_clause_with_same_number_are_different_chunks():
+    answer = make_answer("See [CD 109 Table 3.5].", ["CD109-Table-3.5"])
+
+    assert verify_citations(answer, {"CD109-3.5"}).not_retrieved == ("CD109-Table-3.5",)
+
+
+def test_split_parts_count_as_their_clause_when_retrieved():
+    # Long clauses are stored as CD109-5.3.1#2 etc.; citing CD109-5.3.1 must still verify.
+    answer = make_answer("Max 7% [CD 109 cl. 5.3.1].", ["CD109-5.3.1"])
+
+    assert verify_citations(answer, {"CD109-5.3.1#2", "CD109-Table-2.10#2"}).ok
+
+
+def test_lowercase_appendix_clause_in_brackets():
+    assert inline_citations("[CD 123 cl. a2.1]") == ("CD123-A2.1",)
