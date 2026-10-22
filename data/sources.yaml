@@ -1,27 +1,35 @@
-# The DMRB standards in the index. Fill in version, revision_date and url from
-# standardsforhighways.co.uk (the document's landing page, not a direct PDF link).
-# Download each PDF into data/pdfs/ under `filename` (that folder is git-ignored:
-# DMRB is Crown copyright, so the repo links to the PDFs rather than redistributing them).
+# The DMRB documents in the index. Version and publication date are as printed in each PDF's
+# page footer ("Downloaded from ... CD 109 Revision 1, published: Mar-2020").
+# PDFs live in data/pdfs/ under `filename` and are git-ignored; the url is where to get them.
+# DMRB documents: © Crown copyright, Open Government Licence v3.0.
 # Loading fails while any version is still TODO.
 
 sources:
+  - code: GG 101
+    title: Introduction to the Design Manual for Roads and Bridges
+    version: Version 0.1.0
+    revision_date: 2021-09-29
+    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    filename: GG 101 Introduction to the Design Manual for Roads and Bridges -web.pdf
+
   - code: CD 109
     title: Highway link design
-    version: TODO
-    revision_date: 2000-01-01  # TODO
+    version: Revision 1
+    revision_date: 2020-03-01  # footer says "Mar-2020"; day not given
     url: https://www.standardsforhighways.co.uk/  # TODO: document page
-    filename: CD109.pdf
+    filename: CD 109 revision 1 Highway link design-web.pdf
 
-  - code: CD 123
-    title: Geometric design of at-grade priority and signal-controlled junctions
-    version: TODO
-    revision_date: 2000-01-01  # TODO
-    url: https://www.standardsforhighways.co.uk/  # TODO: document page
-    filename: CD123.pdf
-
-  - code: CG 501
-    title: Design of highway drainage systems
-    version: TODO
-    revision_date: 2000-01-01  # TODO
-    url: https://www.standardsforhighways.co.uk/  # TODO: document page
-    filename: CG501.pdf
+  # Not downloaded yet. Uncomment and fill in from the PDF footer when added.
+  # - code: CD 123
+  #   title: Geometric design of at-grade priority and signal-controlled junctions
+  #   version: TODO
+  #   revision_date: 2000-01-01
+  #   url: https://www.standardsforhighways.co.uk/
+  #   filename: CD 123 ....pdf
+  #
+  # - code: CG 501
+  #   title: Design of highway drainage systems
+  #   version: TODO
+  #   revision_date: 2000-01-01
+  #   url: https://www.standardsforhighways.co.uk/
+  #   filename: CG 501 ....pdf

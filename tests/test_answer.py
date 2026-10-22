@@ -35,7 +35,7 @@ def test_is_immutable():
     ("field", "bad"),
     [
         ("answer", "   "),
-        ("requirement_type", "must"),
+        ("requirement_type", "required"),
         ("confidence", "very high"),
     ],
 )
@@ -55,3 +55,7 @@ def test_schema_is_usable_for_structured_output():
 
     assert set(schema["required"]) == set(schema["properties"])
     assert schema["additionalProperties"] is False
+
+
+def test_accepts_must_as_a_statutory_requirement():
+    assert Answer(**{**VALID, "requirement_type": "must"}).requirement_type == "must"

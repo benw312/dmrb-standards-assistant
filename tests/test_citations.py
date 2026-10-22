@@ -259,3 +259,55 @@ def test_lowercase_prose_is_not_mistaken_for_a_doc_code():
     text = "Max 7% [CD 109 cl. 5.3.1]; at km 150 3.5 m lanes apply."
 
     assert verify_citations(make_answer(text, ["CD109-5.3.1"]), RETRIEVED).ok
+
+
+# --- GG 101 conventions ----------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("[CD 109 cl. E/1.1]", "CD109-E/1.1"),
+        ("CD109-E/1.1", "CD109-E/1.1"),
+        ("cd109-e/1.1", "CD109-E/1.1"),
+        ("GG 101 cl. NI/1.2", "GG101-NI/1.2"),
+    ],
+)
+def test_national_annex_clauses_are_citable(raw, expected):
+    assert normalise_citation(raw) == expected
+
+
+def test_annex_clause_is_distinct_from_core_clause():
+    answer = make_answer("Inform the OO [CD 109 cl. E/1.1].", ["CD109-E/1.1"])
+
+    assert verify_citations(answer, {"CD109-1.1"}).not_retrieved == ("CD109-E/1.1",)
+
+
+def test_unbracketed_annex_reference_is_flagged():
+    text = "Max 7% [CD 109 cl. 5.3.1]; see also clause E/1.1."
+
+    assert verify_citations(make_answer(text, ["CD109-5.3.1"]), RETRIEVED).unbracketed
+
+
+@pytest.mark.parametrize("raw", ["XD 109 cl. 1.1", "CX109-1.1"])
+def test_doc_codes_outside_gg101_scheme_are_not_citations(raw):
+    with pytest.raises(CitationError):
+        normalise_citation(raw)
+
+
+def test_lowercase_annex_prefix_in_brackets_is_read():
+    assert inline_citations("[CD 109 cl. e/1.1]") == ("CD109-E/1.1",)
+
+
+def test_stray_full_stop_inside_brackets_is_tolerated():
+    assert inline_citations("[CD 109 cl. 5.3.1.]") == ("CD109-5.3.1",)
+
+
+@pytest.mark.parametrize(
+    ("text", "reported"),
+    [("See CD 109 cl. E/1.1 too.", "cl. E/1.1"), ("Per Table E/1.1 here.", "Table E/1.1")],
+)
+def test_unbracketed_reference_is_reported_in_full(text, reported):
+    check = verify_citations(make_answer(f"Max [CD 109 cl. 5.3.1]. {text}", ["CD109-5.3.1"]), {})
+
+    assert reported in check.unbracketed
