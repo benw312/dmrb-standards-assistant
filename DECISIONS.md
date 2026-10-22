@@ -99,3 +99,17 @@ guessing. Each rule cites its GG 101 source.
 - **Doc-code letters are checked independently**, so a combination that doesn't exist yet (e.g.
   "GD 109") is accepted. *Alternative:* a list of known codes, which would need updating as the
   DMRB grows. `sources.yaml` and retrieval limit what can actually be cited anyway.
+
+## 2026-10-22: Azure setup as built (differs from the guide)
+- **Subscription:** the free trial gave 0 quota for most models; upgraded to pay-as-you-go.
+- **Chat model:** `gpt-5.4-mini` on **Data Zone Standard** (EU processing). The guide's
+  `gpt-4.1-mini` is blocked for new subscriptions (models go "Deprecated" ~12 months after
+  launch), and Global Standard had 0 quota for current models. Claude Haiku 5.5 / Opus 5.5 have
+  0 quota in every region until a quota request is approved; they'll be added as a second
+  provider for the Phase 6 comparison.
+- **Regions:** Foundry, models and Document Intelligence in Sweden Central; **AI Search in UK
+  South**, because Sweden Central was out of Search capacity. Cross-region latency is negligible.
+- **Embeddings go through the resource-level endpoint** (`https://<resource>.services.ai.azure.com/openai/v1`,
+  token scope `cognitiveservices.azure.com`). The project endpoint's `/openai/v1` serves chat
+  but returned 404 for embeddings, even on the default project. Derived from the project endpoint,
+  so no extra setting. Found by the smoke test (`python -m core.smoke_test`).

@@ -36,4 +36,4 @@ target-version = "py312"
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 
 [tool.coverage.run]
-source = ["ingest", "index", "agent", "evals", "app"]
+source = ["core", "ingest", "index", "agent", "evals", "app"]

@@ -12,16 +12,17 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 ### Phase 0: Azure setup
 - [x] [CC] Repo skeleton, `pyproject.toml` (uv, Python 3.12), `.gitignore`, `.env.example`,
       `.claude/settings.json` lockdown, `scripts/azure_setup.sh`, `scripts/azure_teardown.sh`
-- [ ] [Ben] Personal Azure free account (personal email, personal Mac, not the employer tenant)
-- [ ] [Ben] Cost Management → Budgets: £20/month, alerts at 50/80/100%
-- [ ] [Ben] `brew install azure-cli && az login`
-- [ ] [Ben] `SUFFIX=<yours> ./scripts/azure_setup.sh resources` (RG, AI Search free, Doc Intelligence S0)
-- [ ] [Ben] Foundry portal (ai.azure.com): create Foundry resource + project in `rg-dmrb-assistant`,
-      Sweden Central. Deploy a cheap chat model, a stronger one, and `text-embedding-3-small`
-- [ ] [Ben] Foundry: Management centre → Connected resources → add the Search service
-- [ ] [Ben] `SUFFIX=<yours> FOUNDRY_NAME=<name> ./scripts/azure_setup.sh roles`
-- [ ] [Ben] `cp .env.example .env` and fill in endpoints/deployment names
-- [ ] [CC] `scripts/smoke_test.py`: one call each to chat, embeddings, Search, Doc Intelligence
+- [x] [Ben] Personal Azure account (upgraded to pay-as-you-go: trial quota was 0)
+- [x] [Ben] Cost Management → Budgets: £20/month, alerts at 50/80/100%
+- [x] [Ben] `brew install azure-cli && az login`
+- [x] [Ben] `azure_setup.sh resources` (Search in UK South: Sweden was full)
+- [x] [Ben] Foundry resource `fdy-dmrb-bw01` + project `dmrb-assistant`, Sweden Central;
+      `gpt-5.4-mini` (Data Zone Standard) and `text-embedding-3-small` deployed
+- [ ] [Ben] Foundry: connect the Search service (needed for the Phase 3 built-in search tool)
+- [x] [Ben] `azure_setup.sh roles`
+- [x] [Ben] `.env` filled in
+- [x] [CC] `python -m core.smoke_test`: chat, embeddings, Search, Doc Intelligence all pass
+- [ ] [Ben] Claude Haiku 5.5 / Opus 5.5 (+ gpt-5.4) quota request submitted
 - [x] [CC] Public GitHub repo, branch protection, PR template, Dependabot
 - [x] [CC] GitHub Actions CI: ruff + pytest (no Azure calls)
 
