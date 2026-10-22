@@ -113,3 +113,12 @@ guessing. Each rule cites its GG 101 source.
   token scope `cognitiveservices.azure.com`). The project endpoint's `/openai/v1` serves chat
   but returned 404 for embeddings, even on the default project. Derived from the project endpoint,
   so no extra setting. Found by the smoke test (`python -m core.smoke_test`).
+
+## 2026-10-22: Parsing and caching
+- **Document Intelligence `prebuilt-layout`, Markdown output**, plus the full JSON result (page
+  numbers, table cells, bounding regions) for page lookups and table extraction later.
+- **Cached against the PDF's SHA-256** in `data/parsed/` (git-ignored): re-parsed only when the
+  PDF changes, or with `--force`. Metadata is written last, so an interrupted run re-parses.
+- **The PDF's footer is checked against `sources.yaml` before the billable call**, using pypdf
+  locally. Paying to index the wrong revision is the costliest mistake this step can make.
+- First run: GG 101, CD 109, CD 123, CG 501. 313 pages, about $3.13.

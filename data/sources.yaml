@@ -19,17 +19,16 @@ sources:
     url: https://www.standardsforhighways.co.uk/  # TODO: document page
     filename: CD 109 revision 1 Highway link design-web.pdf
 
-  # Not downloaded yet. Uncomment and fill in from the PDF footer when added.
-  # - code: CD 123
-  #   title: Geometric design of at-grade priority and signal-controlled junctions
-  #   version: TODO
-  #   revision_date: 2000-01-01
-  #   url: https://www.standardsforhighways.co.uk/
-  #   filename: CD 123 ....pdf
-  #
-  # - code: CG 501
-  #   title: Design of highway drainage systems
-  #   version: TODO
-  #   revision_date: 2000-01-01
-  #   url: https://www.standardsforhighways.co.uk/
-  #   filename: CG 501 ....pdf
+  - code: CD 123
+    title: Geometric design of at-grade priority and signal-controlled junctions
+    version: Version 2.1.0
+    revision_date: 2021-11-29
+    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    filename: CD 123 Geometric design of at-grade priority and signal-controlled junctions Version 2.1.0.pdf
+
+  - code: CG 501
+    title: Design of highway drainage systems
+    version: Version 2.2.0
+    revision_date: 2025-09-30
+    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    filename: CG 501 Design of highway drainage systems - Version 2.2.0.pdf
