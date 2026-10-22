@@ -11,12 +11,13 @@ set -euo pipefail
 : "${SUFFIX:?Set SUFFIX to a short lowercase string, e.g. SUFFIX=bw01}"
 
 RG="rg-dmrb-assistant"
-LOCATION="swedencentral"
+LOCATION="${LOCATION:-swedencentral}"  # must match the resource group's region
 SEARCH_NAME="srch-dmrb-${SUFFIX}"
 DOCINTEL_NAME="di-dmrb-${SUFFIX}"
 
 create_resources() {
-  az group create --name "$RG" --location "$LOCATION"
+  # Safe to re-run if you already made the group in the portal (same name and region).
+  az group create --name "$RG" --location "$LOCATION" --output none
 
   # Free tier: 3 indexes, 50 MB, free semantic ranker allowance. aadOrApiKey enables RBAC so
   # code can use DefaultAzureCredential instead of keys.
@@ -36,6 +37,9 @@ create_resources() {
   echo "AZURE_SEARCH_ENDPOINT=https://${SEARCH_NAME}.search.windows.net"
   echo "AZURE_DOCINTEL_ENDPOINT=https://${DOCINTEL_NAME}.cognitiveservices.azure.com/"
 }
+
+# "Foundry User" (formerly "Azure AI User"). Microsoft renamed it in 2026, so use the fixed ID.
+FOUNDRY_USER_ROLE="53ca6127-db72-4b80-b1b0-d745d6d5456d"
 
 assign() {
   local assignee="$1" role="$2" scope="$3"
@@ -59,7 +63,7 @@ assign_roles() {
   assign "$me" "Search Index Data Contributor" "$search_id" User
   assign "$me" "Search Service Contributor" "$search_id" User
   assign "$me" "Cognitive Services User" "$docintel_id" User
-  assign "$me" "Azure AI User" "$foundry_id" User
+  assign "$me" "$FOUNDRY_USER_ROLE" "$foundry_id" User
 
   # Foundry's managed identity, so the built-in Azure AI Search tool can query the index.
   echo "Roles for the Foundry managed identity:"
