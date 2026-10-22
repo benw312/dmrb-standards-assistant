@@ -25,5 +25,6 @@ traces/
 
 .DS_Store
 
-# Private planning notes (mention employer); keep out of the public repo
-docs/*.pdf
+# No PDFs anywhere: standards are linked from sources.yaml, and the build guide in docs/
+# is private (mentions employer).
+*.pdf
