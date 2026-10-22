@@ -45,3 +45,22 @@ One entry per design choice: what, alternatives, why. Newest at the bottom.
 - Public repo from day one; `main` is protected (PRs only, CI must pass, linear history,
   squash merge). Claude Code opens PRs, Ben reviews and merges.
 - Actions pinned to commit SHAs (supply-chain hygiene); Dependabot keeps them and uv deps current.
+
+## 2026-10-22: Citation verification rules
+- **ID format:** chunk IDs are `CD109-5.3.1`; answers cite inline in one rigid form,
+  `[CD 109 cl. 5.3.1]`, with lists allowed (`[CD 109 cl. 5.3.1, 5.3.2; CD 123 cl. 3.4]`). Both
+  normalise to the same ID, defined in one place (`agent.citations.chunk_id`).
+- **Strict by default:** a reference the checker can't read is one it can't verify, so it fails
+  rather than being skipped. That covers bracket groups that don't parse (e.g. `[CD 109 Table 5.3]`)
+  and clause/table/figure numbers in prose outside brackets. *Alternative:* a lenient parser for
+  every phrasing, which grows forever and still misses some. Code review showed the lenient version
+  let hallucinated clauses through (`[CD 109 cl. 5.3.1, 5.9.9]` only checked the first).
+- **Exception:** double-quoted text is skipped, because quoted DMRB wording often says "in
+  accordance with Table 5.3". *Follow-up:* verify quotes appear verbatim in a retrieved chunk.
+- **What else fails the gate:** a cited clause that was never retrieved (hallucination); a clause
+  cited in the text but missing from `citations`, or the reverse; an answer claiming a requirement
+  with no citation; a `not_covered` refusal that cites clauses.
+- **Tables:** cite the clause that introduces the table for now. Table IDs are decided in Phase 1.
+- **Not caught here:** an uncited factual claim inside a refusal. That's a semantic check, left to
+  the evaluation set (refusal accuracy) and the LLM-judge groundedness metric.
+- **Failure reasons are plain sentences** so they can go straight into the retry prompt.
