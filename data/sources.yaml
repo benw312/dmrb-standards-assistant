@@ -1,0 +1,27 @@
+# The DMRB standards in the index. Fill in version, revision_date and url from
+# standardsforhighways.co.uk (the document's landing page, not a direct PDF link).
+# Download each PDF into data/pdfs/ under `filename` (that folder is git-ignored:
+# DMRB is Crown copyright, so the repo links to the PDFs rather than redistributing them).
+# Loading fails while any version is still TODO.
+
+sources:
+  - code: CD 109
+    title: Highway link design
+    version: TODO
+    revision_date: 2000-01-01  # TODO
+    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    filename: CD109.pdf
+
+  - code: CD 123
+    title: Geometric design of at-grade priority and signal-controlled junctions
+    version: TODO
+    revision_date: 2000-01-01  # TODO
+    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    filename: CD123.pdf
+
+  - code: CG 501
+    title: Design of highway drainage systems
+    version: TODO
+    revision_date: 2000-01-01  # TODO
+    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    filename: CG501.pdf

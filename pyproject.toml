@@ -1,0 +1,39 @@
+[project]
+name = "dmrb-assistant"
+version = "0.1.0"
+description = "Answers UK highway design (DMRB) questions with verified clause citations, built on Azure AI Foundry."
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "azure-ai-documentintelligence>=1.0.2",
+    "azure-ai-evaluation>=1.18.9",
+    "azure-ai-projects>=2.9.0",
+    "azure-identity>=1.26.0",
+    "azure-search-documents>=12.0.0",
+    "openai>=3.36.1",
+    "pydantic>=2.14.1",
+    "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["integration: calls live Azure services (skipped in CI)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+
+[tool.coverage.run]
+source = ["ingest", "index", "agent", "evals", "app"]

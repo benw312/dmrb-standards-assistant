@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run pytest:*)",
+      "Bash(uv run ruff:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "ask": [
+      "Bash(az:*)",
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./.env)",
+      "Edit(./evals/golden.jsonl)",
+      "Write(./evals/golden.jsonl)",
+      "Bash(cat .env:*)",
+      "Bash(az group create:*)",
+      "Bash(az search service create:*)",
+      "Bash(az search service update:*)",
+      "Bash(az cognitiveservices account create:*)",
+      "Bash(az cognitiveservices account deployment create:*)",
+      "Bash(az containerapp:*)"
+    ]
+  }
+}
