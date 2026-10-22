@@ -4,17 +4,15 @@ Every chunk's citation (code, version, PDF link) traces back to an entry here, s
 DMRB revision means editing this file and rebuilding the index.
 """
 
-import re
 from datetime import date
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ConfigDict, HttpUrl, field_validator
 
-DEFAULT_SOURCES_PATH = Path(__file__).resolve().parent.parent / "data" / "sources.yaml"
+from ingest.conventions import ConventionError, parse_doc_code
 
-# DMRB document codes: two-letter series then a number, e.g. "CD 109", "CG 501".
-DOC_CODE_PATTERN = r"^[A-Z]{2} \d{3}$"
+DEFAULT_SOURCES_PATH = Path(__file__).resolve().parent.parent / "data" / "sources.yaml"
 
 
 class Source(BaseModel):
@@ -30,9 +28,10 @@ class Source(BaseModel):
     @field_validator("code")
     @classmethod
     def code_is_dmrb_format(cls, value: str) -> str:
-        if not re.match(DOC_CODE_PATTERN, value):
-            raise ValueError(f"Doc code {value!r} should look like 'CD 109'")
-        return value
+        try:
+            return str(parse_doc_code(value))  # GG 101 Appendix A1 format, e.g. "CD 109"
+        except ConventionError as err:
+            raise ValueError(str(err)) from err
 
     @field_validator("version")
     @classmethod

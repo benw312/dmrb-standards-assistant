@@ -64,3 +64,34 @@ One entry per design choice: what, alternatives, why. Newest at the bottom.
 - **Not caught here:** an uncited factual claim inside a refusal. That's a semantic check, left to
   the evaluation set (refusal accuracy) and the LLM-judge groundedness metric.
 - **Failure reasons are plain sentences** so they can go straight into the retry prompt.
+
+## 2026-10-22: Encode GG 101 drafting conventions as code (`ingest/conventions.py`)
+GG 101 defines how every DMRB document is written, so the parser follows it instead of
+guessing. Each rule cites its GG 101 source.
+- **Verbal forms:** `must` (statutory, never varied), `shall` (requirement: departure or an
+  explicitly permitted relaxation), `should` (recommendation: justification plus safety risk
+  assessment, no departure), `may` (permissible: internal review), anything else is a note.
+  A clause's type is its strongest verb. **Only `shall` can need a Departure**, which is the rule
+  `is_departure` answers will be checked against. `must` was added to `Answer.requirement_type`,
+  because the guide's original list missed it.
+- **Numbering (Appendix B):** `X.X` is a requirement, `X.X.X` is advice belonging to requirement
+  `X.X`, unnumbered NOTEs belong to the clause immediately before them. A verb that contradicts
+  the level (a `X.X` clause whose strongest verb is `should`) is flagged for checking by eye, not
+  rejected: it usually means the parser split or merged clauses wrongly.
+- **Annex clauses:** National Application Annex clauses are prefixed `E/` or `NI/` (CD 109 has
+  37). Citations accept them: `[CD 109 cl. E/1.1]` -> `CD109-E/1.1`. Only prefixes seen in real
+  documents are allowed. *Phase 2 note:* `/` is not valid in an Azure AI Search document key,
+  so the index key must be an encoded form of the chunk ID.
+- **Doc codes (Appendix A1):** discipline letter (G/L/C/T) + life-cycle letter (G/A/D/C/M/S/Z) +
+  three digits. Citations and `sources.yaml` both validate against this, from one definition.
+- **Version from the PDF itself:** every page footer prints the code, version and publication
+  date, so the ingest step can check `sources.yaml` against the PDF it's parsing.
+- *Checked against CD 109* (pypdf text): 150 two-level requirements, 80 three-level advice clauses
+  and 37 England-annex clauses, consistent with the scheme. The same extraction ran words
+  together ("Wheretheresultsof..."), which supports using Document Intelligence for real parsing.
+- **Verb matching is lowercase only**, and skips verbs that are quoted ('shall'), bracketed
+  ("(should)") or open a condition ("should the OO agree"). DMRB clauses open with their subject,
+  so a capitalised "May" is a month, not a permission. Found in code review.
+- **Doc-code letters are checked independently**, so a combination that doesn't exist yet (e.g.
+  "GD 109") is accepted. *Alternative:* a list of known codes, which would need updating as the
+  DMRB grows. `sources.yaml` and retrieval limit what can actually be cited anyway.

@@ -15,6 +15,7 @@ from collections.abc import Iterable
 from pydantic import BaseModel, ConfigDict
 
 from agent.answer import Answer
+from ingest.conventions import DOC_SERIES, NAA_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -23,28 +24,33 @@ class CitationError(ValueError):
     """A citation string that doesn't name both a document and a clause."""
 
 
-# Doc codes are uppercase on purpose (no IGNORECASE) so prose like "No 123" isn't a citation.
-_DOC = re.compile(r"^\s*([A-Z]{2})\s?(\d{3})\s*,?\s*")
-_CLAUSE = re.compile(r"^\d+(?:\.\d+)*[a-zA-Z]?$")  # 5.3.1, 5.3.1a
-_CHUNK_ID = re.compile(r"^([A-Z]{2})\s?(\d{3})\s*-\s*(\d+(?:\.\d+)*[A-Z]?)$")
+# Doc codes follow GG 101 Appendix A1 and are uppercase on purpose (no IGNORECASE), so prose
+# like "No 123" isn't a citation. Clauses may carry an annex prefix: E/1.1, NI/1.2.
+_DOC = re.compile(rf"^\s*({DOC_SERIES})\s?(\d{{3}})\s*,?\s*")
+_CLAUSE = re.compile(rf"^(?i:{NAA_PREFIX})?\d+(?:\.\d+)*[a-zA-Z]?$")  # 5.3.1, 5.3.1a, E/1.1
+_CHUNK_ID = re.compile(
+    rf"^({DOC_SERIES})\s?(\d{{3}})\s*-\s*((?:{NAA_PREFIX})?\d+(?:\.\d+)*[A-Z]?)$"
+)
 _CONNECTORS = re.compile(r"\bcl(?:ause)?s?\b\.?|\band\b|[,&]", re.IGNORECASE)
 _BRACKETS = re.compile(r"\[([^\[\]]*)\]")
 # Double-quoted spans are DMRB wording quoted verbatim, which may say "see Table 5.3".
 _QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”")
 # Reference-like text that should have been a bracketed citation.
 _LOOSE_REF = re.compile(
-    r"\b(?:cl(?:ause)?s?\.?|para(?:graph)?s?\.?|table|figure|fig\.)\s*\d"
-    r"|\b(?-i:[A-Z]{2})\s?\d{3}\s*,?\s*-?\s*\d+\.\d",
+    rf"\b(?:cl(?:ause)?s?\.?|para(?:graph)?s?\.?|table|figure|fig\.)\s*(?:{NAA_PREFIX})?\d+(?:\.\d+)*"
+    rf"|\b(?-i:{DOC_SERIES})\s?\d{{3}}\s*,?\s*-?\s*(?:{NAA_PREFIX})?\d+(?:\.\d+)+",
     re.IGNORECASE,
 )
 
 
 def _clean_clause(clause: str) -> str:
-    """'05.3.1A' -> '5.3.1a': leading zeros and letter case shouldn't change identity."""
+    """'05.3.1A' -> '5.3.1a', 'e/1.1' -> 'E/1.1': zeros and case shouldn't change identity."""
+    prefix, _, clause = clause.rpartition("/")
+    prefix = f"{prefix.upper()}/" if prefix else ""
     *parts, last = clause.split(".")
     letter = last[-1].lower() if last[-1].isalpha() else ""
     digits = last[:-1] if letter else last
-    return ".".join(str(int(p)) for p in [*parts, digits]) + letter
+    return prefix + ".".join(str(int(p)) for p in [*parts, digits]) + letter
 
 
 def chunk_id(doc_code: str, clause: str) -> str:
@@ -59,7 +65,8 @@ def _parse_group(group: str) -> tuple[str, ...]:
         match = _DOC.match(segment)
         if match:
             doc, segment = match.group(1) + match.group(2), segment[match.end() :]
-        tokens = _CONNECTORS.sub(" ", segment).split()
+        # rstrip(".") tolerates a stray full stop: "[CD 109 cl. 5.3.1.]"
+        tokens = [t.rstrip(".") for t in _CONNECTORS.sub(" ", segment).split()]
         if doc is None or not tokens or not all(_CLAUSE.match(t) for t in tokens):
             raise CitationError(f"[{group}] is not a clause citation like [CD 109 cl. 5.3.1]")
         ids.extend(chunk_id(doc, t) for t in tokens)

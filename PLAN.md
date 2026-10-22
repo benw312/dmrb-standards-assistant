@@ -26,7 +26,8 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [x] [CC] GitHub Actions CI: ruff + pytest (no Azure calls)
 
 ### Data prep
-- [ ] [Ben] Download the three PDFs into `data/pdfs/`; fill in `data/sources.yaml`
+- [x] [Ben] CD 109 and GG 101 downloaded; licence checked (OGL v3.0)
+- [ ] [Ben] Download CD 123 and CG 501; add document page URLs to `data/sources.yaml`
 - [ ] [Ben] Start `evals/golden.jsonl` (keep going on weekdays, 20-minute sessions).
       Row: `query, ground_truth, expected_clauses, expected_departure, type`
       (types: lookup, multi_hop, departure, out_of_scope). Target 30–50.
@@ -36,6 +37,9 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 
 ### Phase 1: Ingest
 - [x] [CC] `ingest/sources.py`: load and validate `sources.yaml`
+- [x] [CC] `ingest/conventions.py`: GG 101 rules (verbal forms, clause numbering, NOTEs,
+      doc codes, annex prefixes, PDF footer)
+- [ ] [CC] Check `sources.yaml` version against the PDF footer during ingest
 - [ ] [CC] `ingest/parse.py`: Doc Intelligence `prebuilt-layout` → Markdown, cached in `data/parsed/`
 - [ ] [CC] `ingest/models.py`: `Chunk` Pydantic model (+ `refs`, `requirement_type`)
 - [ ] [CC] `ingest/chunk.py`: split on headings then clause numbers; NOTEs and tables stay with

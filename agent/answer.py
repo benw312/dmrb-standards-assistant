@@ -4,7 +4,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-RequirementType = Literal["shall", "should", "may", "note", "not_covered"]
+# GG 101 verbal forms. "must" (statutory) is separate from "shall" because departures
+# never apply to it.
+RequirementType = Literal["must", "shall", "should", "may", "note", "not_covered"]
 Confidence = Literal["high", "medium", "low"]
 
 

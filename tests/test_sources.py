@@ -60,3 +60,23 @@ def test_rejects_malformed_code(tmp_path):
 def test_missing_file_raises_clear_error(tmp_path):
     with pytest.raises(FileNotFoundError):
         load_sources(tmp_path / "nope.yaml")
+
+
+def test_rejects_code_outside_gg101_scheme(tmp_path):
+    text = VALID_YAML.replace("code: CD 109", "code: XD 109")
+
+    with pytest.raises(ValidationError, match="discipline letter"):
+        load_sources(write(tmp_path, text))
+
+
+def test_normalises_code_without_space(tmp_path):
+    sources = load_sources(write(tmp_path, VALID_YAML.replace("code: CD 109", "code: CD109")))
+
+    assert sources[0].code == "CD 109"
+
+
+def test_committed_sources_file_is_valid():
+    # Guards the real data/sources.yaml in CI: no TODO versions or malformed codes on main.
+    sources = load_sources()
+
+    assert {s.code for s in sources} >= {"GG 101", "CD 109"}
