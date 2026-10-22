@@ -3,9 +3,10 @@
 A citation to a clause that was never retrieved is a hallucination, however plausible it looks.
 The checks run in code after every answer; failures go back to the model once, then to a human.
 
-The model must use one rigid inline form, e.g. [CD 109 cl. 5.3.1] or [CD 109 cl. 5.3.1, 5.3.2;
-CD 123 cl. 3.4]. Anything reference-like that isn't in that form fails the gate rather than being
-skipped, because a reference the checker can't read is a reference it can't verify.
+The model must use one rigid inline form, e.g. [CD 109 cl. 5.3.1], [CD 109 cl. 5.3.1, 5.3.2;
+CD 123 cl. 3.4], [CD 109 Table 2.10] or [CD 109 Glossary]. Anything reference-like that isn't in
+that form fails the gate rather than being skipped, because a reference the checker can't read
+is a reference it can't verify.
 """
 
 import logging
@@ -25,37 +26,72 @@ class CitationError(ValueError):
 
 
 # Doc codes follow GG 101 Appendix A1 and are uppercase on purpose (no IGNORECASE), so prose
-# like "No 123" isn't a citation. Clauses may carry an annex prefix: E/1.1, NI/1.2.
+# like "No 123" isn't a citation. Clause numbers may carry an annex prefix (E/1.1, NI/1.2,
+# S/1.1), an appendix letter (A2.1) and a lettered sub-clause (5.3.1a). Tables use the same
+# shape plus a dotted appendix form (Table A.1).
 _DOC = re.compile(rf"^\s*({DOC_SERIES})\s?(\d{{3}})\s*,?\s*")
-_CLAUSE = re.compile(rf"^(?i:{NAA_PREFIX})?\d+(?:\.\d+)*[a-zA-Z]?$")  # 5.3.1, 5.3.1a, E/1.1
-_CHUNK_ID = re.compile(
-    rf"^({DOC_SERIES})\s?(\d{{3}})\s*-\s*((?:{NAA_PREFIX})?\d+(?:\.\d+)*[A-Z]?)$"
+_NUMBER = re.compile(
+    rf"^(?P<naa>(?i:{NAA_PREFIX}))?(?P<letter>(?i:[A-Z])(?:\.(?=\d))?)?"
+    r"(?P<nums>\d+(?:\.\d+)*)(?P<suffix>(?i:N)\d+|[a-zA-Z])?$"
 )
+_TABLE = re.compile(r"^\s*table\s+(\S+?)\s*$", re.IGNORECASE)
+_GLOSSARY = re.compile(r"^\s*glossary\s*$", re.IGNORECASE)
+_CHUNK_ID = re.compile(rf"^({DOC_SERIES})\s?(\d{{3}})\s*-\s*(?:(TABLE)-(\S+)|(GLOSSARY)|(\S+))$")
 _CONNECTORS = re.compile(r"\bcl(?:ause)?s?\b\.?|\band\b|[,&]", re.IGNORECASE)
 _BRACKETS = re.compile(r"\[([^\[\]]*)\]")
 # Double-quoted spans are DMRB wording quoted verbatim, which may say "see Table 5.3".
 _QUOTED = re.compile(r"\"[^\"]*\"|“[^”]*”")
 # Reference-like text that should have been a bracketed citation.
 _LOOSE_REF = re.compile(
-    rf"\b(?:cl(?:ause)?s?\.?|para(?:graph)?s?\.?|table|figure|fig\.)\s*(?:{NAA_PREFIX})?\d+(?:\.\d+)*"
+    rf"\b(?:cl(?:ause)?s?\.?|para(?:graph)?s?\.?|table|figure|fig\.)\s*(?:{NAA_PREFIX})?[A-Z]?\d+(?:\.\d+)*"
     rf"|\b(?-i:{DOC_SERIES})\s?\d{{3}}\s*,?\s*-?\s*(?:{NAA_PREFIX})?\d+(?:\.\d+)+",
     re.IGNORECASE,
 )
 
 
-def _clean_clause(clause: str) -> str:
-    """'05.3.1A' -> '5.3.1a', 'e/1.1' -> 'E/1.1': zeros and case shouldn't change identity."""
-    prefix, _, clause = clause.rpartition("/")
-    prefix = f"{prefix.upper()}/" if prefix else ""
-    *parts, last = clause.split(".")
-    letter = last[-1].lower() if last[-1].isalpha() else ""
-    digits = last[:-1] if letter else last
-    return prefix + ".".join(str(int(p)) for p in [*parts, digits]) + letter
+def _clean_number(raw: str) -> str:
+    """'05.3.1A' -> '5.3.1a', 'e/1.1' -> 'E/1.1', 'a2.1' -> 'A2.1': case and zeros don't count."""
+    match = _NUMBER.match(raw.strip())
+    if not match:
+        raise CitationError(f"{raw!r} is not a clause or table number")
+    naa = match["naa"].upper() if match["naa"] else ""
+    letter = (match["letter"] or "").upper()
+    nums = ".".join(str(int(p)) for p in match["nums"].split("."))
+    suffix = match["suffix"] or ""
+    # 'N2' marks a NOTE's table (Table 6.25N2) and stays upper case; 'a' in 5.3.1a is lower.
+    suffix = suffix.upper() if len(suffix) > 1 else suffix.lower()
+    return f"{naa}{letter}{nums}{suffix}"
+
+
+def _doc(doc_code: str) -> str:
+    return doc_code.replace(" ", "").upper()
 
 
 def chunk_id(doc_code: str, clause: str) -> str:
-    """'CD 109', '5.3.1' -> 'CD109-5.3.1'. The one place the ID format is defined."""
-    return f"{doc_code.replace(' ', '').upper()}-{_clean_clause(clause)}"
+    """'CD 109', '5.3.1' -> 'CD109-5.3.1'. The one place the clause ID format is defined."""
+    return f"{_doc(doc_code)}-{_clean_number(clause)}"
+
+
+def table_id(doc_code: str, number: str) -> str:
+    """'CD 109', '2.10' -> 'CD109-Table-2.10'."""
+    return f"{_doc(doc_code)}-Table-{_clean_number(number)}"
+
+
+def glossary_id(doc_code: str) -> str:
+    """'CD 109' -> 'CD109-Glossary' (terms, definitions and abbreviations)."""
+    return f"{_doc(doc_code)}-Glossary"
+
+
+def _parse_segment(doc: str, segment: str) -> list[str]:
+    if match := _TABLE.match(segment):
+        return [table_id(doc, match.group(1).rstrip("."))]
+    if _GLOSSARY.match(segment):
+        return [glossary_id(doc)]
+    # rstrip(".") tolerates a stray full stop: "[CD 109 cl. 5.3.1.]"
+    tokens = [t.rstrip(".") for t in _CONNECTORS.sub(" ", segment).split()]
+    if not tokens or not all(_NUMBER.match(t) for t in tokens):
+        raise CitationError(f"{segment!r} is not a clause list")
+    return [chunk_id(doc, t) for t in tokens]
 
 
 def _parse_group(group: str) -> tuple[str, ...]:
@@ -65,11 +101,14 @@ def _parse_group(group: str) -> tuple[str, ...]:
         match = _DOC.match(segment)
         if match:
             doc, segment = match.group(1) + match.group(2), segment[match.end() :]
-        # rstrip(".") tolerates a stray full stop: "[CD 109 cl. 5.3.1.]"
-        tokens = [t.rstrip(".") for t in _CONNECTORS.sub(" ", segment).split()]
-        if doc is None or not tokens or not all(_CLAUSE.match(t) for t in tokens):
-            raise CitationError(f"[{group}] is not a clause citation like [CD 109 cl. 5.3.1]")
-        ids.extend(chunk_id(doc, t) for t in tokens)
+        try:
+            if doc is None:
+                raise CitationError("no document code")
+            ids.extend(_parse_segment(doc, segment))
+        except CitationError:
+            raise CitationError(
+                f"[{group}] is not a citation like [CD 109 cl. 5.3.1] or [CD 109 Table 2.10]"
+            ) from None
     return tuple(ids)
 
 
@@ -77,7 +116,16 @@ def normalise_citation(raw: str) -> str:
     """One citation in either form ('CD109-5.3.1' or 'CD 109 cl. 5.3.1') -> chunk ID."""
     text = raw.strip().strip("[]").strip()
     if match := _CHUNK_ID.match(text.upper()):
-        return chunk_id(match.group(1) + match.group(2), match.group(3))
+        series, number, is_table, table_number, is_glossary, clause = match.groups()
+        doc = series + number
+        try:
+            if is_table:
+                return table_id(doc, table_number)
+            if is_glossary:
+                return glossary_id(doc)
+            return chunk_id(doc, clause)
+        except CitationError:
+            raise CitationError(f"{raw!r} is not a citation like 'CD109-5.3.1'") from None
     ids = _parse_group(text)
     if len(ids) != 1:
         raise CitationError(f"{raw!r} should be exactly one clause, like 'CD109-5.3.1'")
@@ -153,7 +201,8 @@ def _retrieved_set(retrieved_ids: Iterable[str]) -> set[str]:
     valid = set()
     for raw in retrieved_ids:
         try:
-            valid.add(normalise_citation(raw))
+            # Split parts of a long clause or table (CD109-5.3.1#2) count as the clause itself.
+            valid.add(normalise_citation(raw.split("#", 1)[0]))
         except CitationError:
             logger.warning("Skipping malformed retrieved chunk ID %r", raw)
     return valid

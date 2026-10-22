@@ -95,6 +95,8 @@ def test_each_verbal_form_explains_how_it_can_be_varied():
         ("NI/1.2", ClauseKind.REQUIREMENT, "NI", None),
         ("E/2.4.1", ClauseKind.ADVICE, "E", "E/2.4"),
         ("E/1", ClauseKind.SECTION, "E", None),
+        ("S/1.1", ClauseKind.REQUIREMENT, "S", None),  # CG 501 Scotland annex
+        ("E/1.", ClauseKind.SECTION, "E", None),
     ],
 )
 def test_numbering_level_gives_clause_kind(raw, kind, naa, parent):
@@ -267,3 +269,25 @@ def test_footer_tolerates_spacing_and_date_formats(line, code, published):
 
     assert str(footer.doc_code) == code
     assert footer.published == published
+
+
+@pytest.mark.parametrize(
+    ("raw", "kind", "parent"),
+    [
+        ("A2", ClauseKind.SECTION, None),
+        ("A2.1", ClauseKind.REQUIREMENT, None),
+        ("A2.1.3", ClauseKind.ADVICE, "A2.1"),
+    ],
+)
+def test_appendix_clauses(raw, kind, parent):
+    # CD 123 Appendix A numbers its clauses A1, A2.1, ...
+    number = parse_clause_number(raw)
+
+    assert number.appendix == "A"
+    assert number.kind is kind
+    assert number.parent == parent
+    assert str(number) == raw
+
+
+def test_appendix_clauses_are_not_checked_against_appendix_b_verbs():
+    assert clause_consistency_warning(parse_clause_number("A2.1"), "may") is None
