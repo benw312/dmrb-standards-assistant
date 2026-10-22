@@ -24,6 +24,10 @@ One entry per design choice: what, alternatives, why. Newest at the bottom.
 - **Alternatives:** Commit `data/parsed/` for reproducibility.
 - **Why:** DMRB is Crown copyright. The repo commits code and `sources.yaml` metadata, and links to
   standardsforhighways.co.uk.
+- **Update (same day):** checked the PDFs: DMRB is published under the Open Government Licence
+  v3.0, which allows reuse with attribution. Short extracts are now committed as test fixtures,
+  with attribution. PDFs stay out of git anyway (size, and `sources.yaml` pins the version);
+  `*.pdf` is ignored repo-wide after one was committed by accident in #5.
 
 ## 2026-10-22: `sources.yaml` fails to load while any version is TODO
 - **Why:** The version appears in every citation. A placeholder would pass silently into answers.
