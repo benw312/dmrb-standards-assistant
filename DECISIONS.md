@@ -243,3 +243,26 @@ guessing. Each rule cites its GG 101 source.
 - **Flowchart:** CG 501 Fig 2.5 asks judgement questions, so no tool; its text will be indexed.
 - Ben's approach: build everything, then drop whatever proves too hard (tier 3 first).
 
+
+## 2026-10-22: CD 109 equation tools and clause lookups (Phase 4)
+- **Six CD 109 equations are tools** (`agent/tools/equations.py`): bendiness, Ac (Eq 2.2a/b),
+  VISI (Eq 2.8.1, 2.8.2), superelevation (Eq 4.2 with cl. 4.1-4.4), transition length (Eq 4.13
+  with cl. 4.12-4.15). Each returns the value, the clause IDs it relied on, notes, and warnings;
+  any warning sets `needs_review`.
+- **Superelevation uses Table 2.10's radii, not the clauses' V²/R shorthand.** Cl. 4.2 says
+  "V²/R > 7", the table's column says 7.07, and the rounded radii give 6.8-7.08 depending on
+  speed. The clauses are written against the radii ("radii less than those shown in Table
+  2.10"), so the tool only accepts Table 2.10's six design speeds. Check: Eq 4.2 at the table's
+  3.5%, 5% and 7% radii reproduces those values within 0.25 at every speed.
+- **At exactly the adverse-camber minimum radius, camber applies.** Cl. 4.1 covers radii "less
+  than" it and cl. 4.1.1 radii "greater than" it, so the standard leaves equality open; a minimum
+  radius *with* adverse camber permits adverse camber at that radius. Ben to confirm.
+- **Exact where it decides compliance, consistent where it's advisory.** The cap, L vs √(24R)
+  and the q limits are exact product comparisons. Range checks (Ac on Figure 2.1, VISI <= 720 m)
+  use the displayed value, so "720.0 m, beyond 720 m" can't happen. Inputs are capped at 10
+  significant digits and realistic ranges (R >= 1 m, q >= 0.01), so extreme input is a
+  validation error, never a decimal-arithmetic exception (found by code review).
+- **`get_clause` / `get_table` fetch by citation** with a `citation_id` filter and reassemble
+  split parts. Only table and glossary parts drop their repeated caption/header; clause parts
+  are joined whole (review found the generic version could drop a real line). A clause number
+  printed twice in a standard (`#dup2`) is refused as ambiguous rather than merged.
