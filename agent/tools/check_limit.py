@@ -16,7 +16,7 @@ from pydantic import (
     model_validator,
 )
 
-from agent.tools.units import EXACT, Unit, check_same_dimension, convert
+from agent.tools.units import EXACT, Unit, check_same_dimension, convert, format_decimal
 
 Comparison = Literal["<=", "<", ">=", ">", "between"]
 
@@ -28,10 +28,7 @@ MAX_ABS_EXPONENT = 9
 _FAIL_WORDING = {"<=": "exceeded by", "<": "exceeded by", ">=": "short by", ">": "short by"}
 
 
-def _fmt(number: Decimal) -> str:
-    """Plain notation, no trailing zeros, no '-0': '1000' not '1E+3'."""
-    cleaned = EXACT.plus(number.normalize(EXACT))  # plus() turns -0 into 0
-    return format(cleaned, "f")
+_fmt = format_decimal
 
 
 class CheckLimitArgs(BaseModel):

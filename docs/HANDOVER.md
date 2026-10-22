@@ -144,6 +144,10 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
   is the Fig 9.23N2 verge-width inset read, or drop it?
 - [ ] Digitise CG 501 Fig 7.5.4 and Fig 7.5.1, and CD 109 Fig 2.1, with WebPlotDigitizer
   (how-to in `docs/CHARTS.md`). Not needed until the tier 2 tools are built.
+- [ ] Superelevation at exactly Table 2.10's "minimum R with adverse camber": the tool says
+  camber (cl. 4.1 says "less than", 4.1.1 "greater than", so equality is open). Agree?
+- [ ] Harmonic mean visibility warns below 20 readings (2 km at 100 m spacing, cl. 2.6/2.6.1).
+  Is that the right trigger?
 - [ ] Note: CD 109 cl. 9.24 and 6.9 cite "Figure 9.24N2", which doesn't exist (it's 9.23N2).
   Worth knowing if you report errata.
 
@@ -158,6 +162,7 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 1. When the retrieval questions land: run `evals.recall`, fix chunking or the embedding text
    if semantic recall@5 < 80%, put the number in the README.
 2. Phase 3 RAG baseline (`agent/rag.py`) once Ben's system prompt is written.
-3. Phase 4 tier 1 formula tools (`docs/CHARTS.md`), which only need Ben's formula
-   confirmations; then the chart data format and tier 2 once charts are digitised.
+3. Phase 4: CD 109 equation tools and `get_clause`/`get_table` are built. Next: the CG 501
+   flow-path and Fig 9.23N2 tools after Ben's confirmations, then the chart data format and
+   tier 2 once charts are digitised.
 4. CG 501 Fig 2.5: index the flowchart's text as a figure chunk.

@@ -85,3 +85,35 @@ band, then on to Table 2.10's stopping sight distance and radii for that band.
   browser. Screenshot the figure (the images are ~300 dpi), set the axes from two known ticks,
   then click the markers. The CG 501 charts plot markers at whole-number values, so the points
   can be read straight off.
+
+## Scaling to the whole DMRB
+
+The survey above was done by hand for three standards. Across all of the DMRB, the approach is
+to automate finding the charts, prioritise them by demand, and add each chart as data rather
+than code.
+
+1. **Find candidates automatically at ingest.** Document Intelligence already returns figure
+   regions and captions. A scan flags likely charts: axis-like tick numbers and unit labels
+   inside the figure, plus "Equation N" captions. On these three standards it flagged 9 of
+   about 110 figures, including all 7 real charts. The candidate pages are rendered to images
+   for a person, or a vision model, to classify as chart / formula / layout drawing / flowchart.
+   That goes into an inventory file per document.
+2. **Prioritise by value, not completeness.** Rank candidates by how many clauses cite them
+   and how strongly ("shall" above "should"). Add real demand from the agent's own traces: when
+   a question needs a figure that has no tool, the agent says so and escalates, and that event
+   is logged. The most-asked charts get built first.
+3. **Add each chart as data, not code.** Formulas stay as small tested functions; there are few
+   of them, and the standards print worked examples to test against. Each chart becomes a
+   digitised YAML file with provenance: document, version, figure, who digitised it and when.
+   One generic `check_chart(chart_id, inputs)` tool interpolates any of them. Adding a chart
+   needs no new code, and tests check that every digitised point round-trips.
+4. **Never guess from a caption.** If no tool exists for a figure, the answer names the figure
+   and goes to an engineer. That's the same escalation path as a possible departure.
+5. **Keep it current.** Chart files are keyed to the document version in `sources.yaml`. When
+   a revision is ingested (the footer check already detects a version change), any chart whose
+   version no longer matches fails a test until someone re-checks it.
+
+The trade-off to state in an interview: people stay in the loop for classifying and digitising
+charts, because they're ground truth, like the eval answers. That human work is spread over
+time and directed at the charts people actually ask about, rather than done up front for all
+of the DMRB.

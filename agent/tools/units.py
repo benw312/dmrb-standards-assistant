@@ -55,3 +55,9 @@ def convert(value: Decimal, from_unit: str, to_unit: str) -> Decimal:
     source_factor = _UNITS[normalise(from_unit)][1]
     target_factor = _UNITS[normalise(to_unit)][1]
     return EXACT.divide(EXACT.multiply(value, source_factor), target_factor)
+
+
+def format_decimal(number: Decimal) -> str:
+    """Plain notation, no trailing zeros, no '-0': '1000' not '1E+3'."""
+    cleaned = EXACT.plus(number.normalize(EXACT))  # plus() turns -0 into 0
+    return format(cleaned, "f")
