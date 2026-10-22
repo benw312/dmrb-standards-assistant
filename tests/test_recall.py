@@ -1,6 +1,5 @@
-import json
-
 import pytest
+import yaml
 
 from evals.recall import (
     QuestionsError,
@@ -23,8 +22,8 @@ from tests.index_fixtures import vector
 
 
 def _write(tmp_path, rows):
-    path = tmp_path / "retrieval.jsonl"
-    path.write_text("\n".join(r if isinstance(r, str) else json.dumps(r) for r in rows) + "\n")
+    path = tmp_path / "retrieval.yaml"
+    path.write_text(rows if isinstance(rows, str) else yaml.safe_dump(rows, sort_keys=False))
     return path
 
 
@@ -42,32 +41,44 @@ def test_expected_citations_are_normalised_to_chunk_ids():
     assert q.expected == ("CD109-5.3.1", "CD109-Table-3.5", "CD123-E/1.1", "CD109-2.10")
 
 
-def test_load_questions_skips_blank_lines(tmp_path):
+def test_load_questions_reads_the_hand_written_yaml_format(tmp_path):
+    # Exactly the layout the template shows Ben, comments and blank lines included.
     path = _write(
         tmp_path,
-        [
-            {"id": "R01", "query": "q1", "expected": ["CD 109 cl. 4.5"]},
-            "",
-            {"id": "R02", "query": "q2", "expected": ["CD 109 Table 3.5"], "notes": "table"},
-        ],
+        """# questions
+- id: R01
+  query: "What is the maximum superelevation on an all-purpose road?"
+  expected: [CD 109 cl. 4.5]
+
+- id: R02
+  query: "Layout constraint: what value for a D2AP?"
+  expected:
+    - CD 109 Table 2.3
+    - CD 109 cl. 2.4
+  notes: table lookup
+""",
     )
 
     questions = load_questions(path)
 
     assert [q.id for q in questions] == ["R01", "R02"]
-    assert questions[1].notes == "table"
+    assert questions[0].expected == ("CD109-4.5",)
+    assert questions[1].expected == ("CD109-Table-2.3", "CD109-2.4")
+    assert questions[1].query.startswith("Layout constraint:")
+    assert questions[1].notes == "table lookup"
 
 
-def test_load_questions_reports_every_bad_line(tmp_path):
+def test_load_questions_reports_every_bad_entry(tmp_path):
     path = _write(
         tmp_path,
         [
             {"id": "R01", "query": "q1", "expected": ["CD 109 cl. 4.5"]},
-            "{not json",
-            {"id": "R03", "query": "q3", "expected": []},
-            {"id": "R04", "query": "q4", "expected": ["clause 4.5"]},  # no document code
+            {"id": "R02", "query": "q2", "expected": []},
+            {"id": "R03", "query": "q3", "expected": ["clause 4.5"]},  # no document code
             {"id": "R01", "query": "dup", "expected": ["CD 109 cl. 4.6"]},
-            {"id": "R06", "query": "q6", "expected": ["CD 109 cl. 1.1"], "answer": "typo field"},
+            {"id": "R05", "query": "q5", "expected": ["CD 109 cl. 1.1"], "answer": "typo field"},
+            {"id": "R06", "query": "q6", "expected": [4.5]},  # bare number, no document
+            "just a string",
         ],
     )
 
@@ -75,20 +86,33 @@ def test_load_questions_reports_every_bad_line(tmp_path):
         load_questions(path)
     message = str(err.value)
     for fragment in (
-        "line 2: not valid JSON",
-        "line 3: expected",
-        "line 4: expected",
-        "line 5: duplicate id 'R01'",
-        "line 6: answer",
+        "question 2 (R02): expected",
+        "question 3 (R03): expected",
+        "question 4 (R01): duplicate id",
+        "question 5 (R05): unknown field 'answer'",
+        "question 6 (R06): expected",
+        "question 7: ",
     ):
         assert fragment in message
+    assert "question 1 " not in message
 
 
-def test_missing_or_empty_file_is_a_clear_error(tmp_path):
+@pytest.mark.parametrize(
+    ("text", "match"),
+    [
+        ("- id: R01\n  query: [unclosed\n", "line 3: expected"),
+        ("id: R01\nquery: q\n", "must be a list"),
+        ("# nothing yet\n", "no questions"),
+    ],
+)
+def test_malformed_yaml_is_a_clear_error(tmp_path, text, match):
+    with pytest.raises(QuestionsError, match=match):
+        load_questions(_write(tmp_path, text))
+
+
+def test_missing_file_is_a_clear_error(tmp_path):
     with pytest.raises(QuestionsError, match="not found"):
-        load_questions(tmp_path / "nope.jsonl")
-    with pytest.raises(QuestionsError, match="no questions"):
-        load_questions(_write(tmp_path, [""]))
+        load_questions(tmp_path / "nope.yaml")
 
 
 def test_unknown_expected_flags_citations_no_chunk_carries():
@@ -223,7 +247,51 @@ def test_index_mismatch_names_missing_and_stale_documents():
 def test_blank_query_and_non_utf8_file_are_rejected(tmp_path):
     with pytest.raises(QuestionsError, match="query"):
         load_questions(_write(tmp_path, [{"id": "R01", "query": "  ", "expected": ["CD109-1.1"]}]))
-    path = tmp_path / "bad.jsonl"
+    path = tmp_path / "bad.yaml"
     path.write_bytes(b"\xff\xfe")
     with pytest.raises(QuestionsError, match="UTF-8"):
         load_questions(path)
+
+
+def _error_for(tmp_path, text):
+    with pytest.raises(QuestionsError) as err:
+        load_questions(_write(tmp_path, text))
+    return str(err.value)
+
+
+def test_a_key_repeated_in_one_question_is_rejected_not_overwritten(tmp_path):
+    # Copying a block and leaving the old line in place: safe_load would keep the last one.
+    text = '- id: R01\n  query: "q"\n  expected: [CD 109 cl. 4.5]\n  expected: [CD 109 cl. 9.9]\n'
+
+    message = _error_for(tmp_path, text)
+
+    assert "line 4" in message and "'expected' appears twice" in message
+
+
+def test_a_bare_clause_is_accepted_and_repeats_are_dropped(tmp_path):
+    text = (
+        '- id: R01\n  query: "q"\n  expected: CD 109 cl. 4.5\n'
+        '- id: R02\n  query: "q"\n  expected: [CD 109 cl. 4.5, CD109-4.5]\n'
+    )
+
+    questions = load_questions(_write(tmp_path, text))
+
+    assert [q.expected for q in questions] == [("CD109-4.5",), ("CD109-4.5",)]
+
+
+@pytest.mark.parametrize(
+    ("text", "fragment"),
+    [
+        (
+            '- id: no\n  query: "q"\n  expected: [CD 109 cl. 4.5]\n',
+            "question 1: id must be text: put it in double quotes",
+        ),
+        ('- id: R01\n  query: "q"\n  expected:\n', "list at least one clause"),
+        ('- id: R01\n  query: "q"\n  expectd: [CD 109 cl. 4.5]\n', "unknown field 'expectd'"),
+        ("- id: R01\n  query: Layout: what value?\n  expected: [CD 109 cl. 4.5]\n", "line 2"),
+        ('- id: R01\n\tquery: "q"\n', "a tab instead of spaces"),
+        ('- id: EXAMPLE-1\n  query: "q"\n  expected: [CD 109 cl. 4.5]\n', "template's example"),
+    ],
+)
+def test_hand_editing_mistakes_get_plain_messages(tmp_path, text, fragment):
+    assert fragment in _error_for(tmp_path, text)

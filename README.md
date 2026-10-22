@@ -70,7 +70,7 @@ az login                          # all Azure auth is keyless (DefaultAzureCrede
 cp .env.example .env              # fill in endpoints and deployment names
 
 uv run python -m index.rebuild    # embed data/chunks/ and recreate the search index
-uv run python -m evals.recall     # recall@5 per search mode on evals/retrieval.jsonl
+uv run python -m evals.recall     # recall@5 per search mode on evals/retrieval.yaml
 ```
 
 Azure resources are created with [`scripts/azure_setup.sh`](scripts/azure_setup.sh) and removed

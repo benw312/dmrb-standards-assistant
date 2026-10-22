@@ -15,7 +15,7 @@ azure-ai-evaluation, Pydantic, pytest. Auth: DefaultAzureCredential, never API k
 - Never read, print or commit `.env`.
 - Never run `az` commands that create or scale billable resources. Print them for me to run
   (see `scripts/azure_setup.sh`).
-- Never edit `evals/golden.jsonl` or `evals/retrieval.jsonl`. Ground truth is written by me.
+- Never edit `evals/golden.jsonl` or `evals/retrieval.yaml`. Ground truth is written by me.
 - Write a test with every module; run `uv run pytest` before saying a task is done.
 - Explain non-obvious code in a short comment aimed at a reviewer.
 - Work on a branch and open a PR for me to review and merge; never push to `main`. Stage

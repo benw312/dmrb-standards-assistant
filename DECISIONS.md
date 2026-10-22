@@ -195,3 +195,6 @@ guessing. Each rule cites its GG 101 source.
 - **Open (Ben):** questions that name a standard ("Which roads does CD 109 apply to?") can miss,
   because clause text says "this document", not "CD 109". Option: prefix the embedding text with
   `CD 109 Highway link design >`. Decide once recall on the real questions is in.
+- **Retrieval questions are YAML** (`evals/retrieval.yaml`), not JSONL: Ben writes them by
+  hand, and a block per question is easier to copy and edit than one JSON object per line.
+  `golden.jsonl` may follow later if it's written the same way.

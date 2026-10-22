@@ -33,7 +33,7 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [ ] [Ben] Start `evals/golden.jsonl` (keep going on weekdays, 20-minute sessions).
       Row: `query, ground_truth, expected_clauses, expected_departure, type`
       (types: lookup, multi_hop, departure, out_of_scope). Target 30–50.
-- [ ] [Ben] Write the 15 retrieval questions with known clause IDs (`evals/retrieval.jsonl`)
+- [ ] [Ben] Write the 20 retrieval questions with known clause IDs (`evals/retrieval.yaml`)
 
 ## Weekend 1: Phases 1–3 → cited answers, recall@5 measured
 

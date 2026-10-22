@@ -1,0 +1,28 @@
+# Retrieval questions: ground truth for recall@5, written by Ben.
+# Run: uv run python -m evals.recall
+#
+# To add a question, copy a block (from "- id:" to the blank line after it) and edit it.
+# - id: unique, e.g. R01, R02 ...
+# - query: the question as an engineer would ask it. Keep the double quotes: they stop a
+#   colon or a leading symbol in the question from breaking the file.
+# - expected: every clause or table that counts as a correct hit (any one is enough), as
+#   you'd cite it: CD 109 cl. 4.5 | CD 109 Table 3.5 | CD 123 cl. E/1.1 | CD 109 Glossary
+# - notes: optional, anything you want to remember about the question.
+# Don't put # inside a value unless it's in double quotes: YAML reads the rest as a comment.
+# Indent with two spaces (VS Code does this when you press Enter after a line).
+#
+# Example layout only: the clause numbers below are placeholders, not checked answers.
+# To use a block: delete the leading "# " on each line, then replace the EXAMPLE id,
+# query and clauses (the loader rejects ids starting EXAMPLE).
+#
+# - id: EXAMPLE-1
+#   query: "EXAMPLE: What is the maximum superelevation on an all-purpose road?"
+#   expected: [CD 109 cl. 4.5]
+#   notes: "wording matches the standard"
+#
+# - id: EXAMPLE-2
+#   query: "EXAMPLE: How much banking should a bend have?"
+#   expected:
+#     - CD 109 cl. 4.5
+#     - CD 109 Table 4.2
+#   notes: "lay wording; two clauses count"
