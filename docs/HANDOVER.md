@@ -8,11 +8,11 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 | Phase | State |
 |---|---|
 | 0. Setup | Done. Azure resources live, smoke test 4/4 (`uv run python -m core.smoke_test`) |
-| 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 654 chunks |
-| 2. Index | Index built (654 documents). `evals/recall.py` ready; waiting on Ben's 20 retrieval questions |
-| 3–7 | Not started. `agent/answer.py`, `agent/citations.py`, `agent/tools/check_limit.py` already built and tested for Phases 3–4 |
+| 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 656 chunks; Ben's 20-chunk review fixed (PR #15) |
+| 2. Index | Index built (656 documents). `evals/recall.py` ready; waiting on Ben's 20 retrieval questions |
+| 3–7 | Not started. `agent/answer.py`, `agent/citations.py`, `agent/tools/check_limit.py` already built and tested for Phases 3–4. Phase 4 chart tools planned in `docs/CHARTS.md` |
 
-Open PRs at handover: #12 (chunker) and the PR adding this document.
+Open PRs: #16 (chart catalogue). Last updated 2026-10-22.
 
 ## Azure as built
 
@@ -113,23 +113,51 @@ Answers cite inline as `[CD 109 cl. 5.3.1]`, `[CD 109 Table 3.5]`, `[CD 109 Glos
 
 ## Next steps
 
-**Ben**
-- Write 20 retrieval questions in `evals/retrieval.yaml`: copy a block, edit it (the file's
-  comments show the layout). `expected` lists every clause or table that counts as a correct
-  hit (any one is enough), in citation form: `CD 109 cl. 4.5`, `CD 109 Table 3.5`,
-  `CD 123 cl. E/1.1`. The loader normalises them and names any bad entry. Mix lookups, table
-  values, wording that differs from the standard ("banking on a bend"), and at least one
-  question per standard.
-- Check the 20 chunks in `data/chunks/review_sample.md` against the PDFs.
-- Add each standard's document page URL to `data/sources.yaml`.
-- Later: `evals/golden.jsonl` (30–50 questions with answers) for Phase 6.
+### Ben: open checks
 
-**Claude Code: Phase 2**
-1. `index/schema.py`: one field per Chunk attribute; `text` searchable; `doc_code`,
-   `citation_id`, `kind`, `requirement_type` filterable; 1536-dim vector; semantic config.
-   Document key must be an encoding of the chunk ID (`/` and `#` aren't valid key characters).
-2. `index/rebuild.py` (`python -m index.rebuild`): embed `heading_path + text`, upload in
-   batches of 100, recreate the index from `data/chunks/`.
-3. `evals/recall.py`: load `evals/retrieval.yaml`, run hybrid + semantic search, report
-   recall@5 per question and overall; README gets the number. Below ~80%: fix chunking or the
-   embedding text before Phase 3.
+Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as you go.
+
+**Blocking Phase 2 sign-off**
+- [ ] Write 20 retrieval questions in `evals/retrieval.yaml`. Copy a block and edit it; the
+  file's comments show the layout. `expected` = what you'd cite in your own answer
+  (`CD 109 cl. 4.5`, `CD 109 Table 3.5`, `CD 123 cl. E/1.1`); any one counts as a hit. If the
+  answer needs a clause *and* the table it points to, list both. Note multi-hop questions in
+  `notes`. Then run `uv run python -m evals.recall` and paste the table into the README.
+- [ ] If semantic recall@5 < 80%: decide whether to prefix the embedding text with the
+  document code and title (see DECISIONS.md, "Search index").
+
+**From the chunk review (PR #15)**
+- [ ] Spot-check the fixed chunks: `uv run python -m ingest.chunk --show CD123-7.7` (also
+  `CD123-Table-5.18a`, `CD123-Table-5.18b`, `CG501-Table-5.2`).
+- [ ] CD 109 cl. 5.2 was left unticked with no note. It matches the PDF word for word; say what
+  looked wrong, if anything.
+- [ ] CD 123 Table 5.18b row 1 prints "≤ 450, > 4% gradient" where every other row says "≥".
+  Typo in the standard? (Affects how a future tool or answer should read it.)
+
+**For the Phase 4 chart tools (`docs/CHARTS.md`)**
+- [ ] Confirm the tier 1 formulas are acceptable to cite, especially CG 501 flow path
+  `G = √(S² + C²)` and `L = W·√(1 + (S/C)²)` (they reproduce Fig 7.5.3N2a/b, but CG 501
+  doesn't print them).
+- [ ] Fig 9.23N2: which section a value exactly on a V²/R boundary (1.25, 3.53, 10, 20) falls
+  in, and what applies above V²/R = 20.
+- [ ] Decide tier 3: build CD 123 Fig 2.3.1 (junction type by flows, flagged approximate)? How
+  is the Fig 9.23N2 verge-width inset read, or drop it?
+- [ ] Digitise CG 501 Fig 7.5.4 and Fig 7.5.1, and CD 109 Fig 2.1, with WebPlotDigitizer
+  (how-to in `docs/CHARTS.md`). Not needed until the tier 2 tools are built.
+- [ ] Note: CD 109 cl. 9.24 and 6.9 cite "Figure 9.24N2", which doesn't exist (it's 9.23N2).
+  Worth knowing if you report errata.
+
+**Other**
+- [ ] Add each standard's document page URL to `data/sources.yaml` (chunk links currently
+  point at the site root).
+- [ ] Phase 3: write the system prompt (rules in the build guide p.5).
+- [ ] Later: `evals/golden.jsonl` (30–50 questions with answers) for Phase 6.
+
+### Claude Code: next
+
+1. When the retrieval questions land: run `evals.recall`, fix chunking or the embedding text
+   if semantic recall@5 < 80%, put the number in the README.
+2. Phase 3 RAG baseline (`agent/rag.py`) once Ben's system prompt is written.
+3. Phase 4 tier 1 formula tools (`docs/CHARTS.md`), which only need Ben's formula
+   confirmations; then the chart data format and tier 2 once charts are digitised.
+4. CG 501 Fig 2.5: index the flowchart's text as a figure chunk.
