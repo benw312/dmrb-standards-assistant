@@ -75,6 +75,18 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 ### Phase 4: Agent loop
 - [ ] [Ben] Write tool descriptions
 - [ ] [CC] Tools: `search_standards`, `get_clause`, `get_table`, `check_limit`, with arg models
+- Calculation tools from charts and equations (catalogue and formulas: `docs/CHARTS.md`).
+  Build tier by tier; drop any that prove too hard.
+  - [ ] [Ben] Confirm tier 1 formulas and band edges (Fig 9.23N2 sides, CG 501 flow-path formulas)
+  - [ ] [CC] Tier 1 formulas: Ac (Eq 2.2a/b), VISI (Eq 2.8.1, 2.8.2), superelevation (Eq 4.2),
+        transition length (Eq 4.13), flow path length/gradient (CG 501 7.5.3), overtaking
+        section from V²/R (Fig 9.23N2)
+  - [ ] [CC] Chart data format (`data/charts/*.yaml`), interpolation, out-of-range and marginal flags
+  - [ ] [Ben] Digitise CG 501 Fig 7.5.4 and 7.5.1, and CD 109 Fig 2.1 (WebPlotDigitizer)
+  - [ ] [CC] Tier 2 chart tools: Fig 7.5.4, Fig 7.5.1, design speed from Fig 2.1 + Table 2.3
+  - [ ] [CC] Flagship chain: bendiness/VISI/verge/road type -> design speed -> Table 2.10 values
+  - [ ] [Ben] Decide tier 3: CD 123 Fig 2.3.1 junction type (build?), Fig 9.23N2 verge inset
+  - [ ] [CC] CG 501 Fig 2.5 flowchart: index its text as a figure chunk (no tool)
 - [ ] [CC] Responses-API function-calling loop: max 6 steps, time budget, JSONL traces, escalate on limit
 - [ ] [Ben] Read traces, decide what to fix
 

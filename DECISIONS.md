@@ -227,3 +227,19 @@ guessing. Each rule cites its GG 101 source.
 - **Checked, no change:** the glossary's last three CD 109 terms were in split part
   `CD109-Glossary#2`, not missing. Chunk pages are physical PDF pages (cover = 1), which is what
   `#page=N` links need; printed page numbers are one lower. A chunk records its first page only.
+
+## 2026-10-22: Charts become calculation tools (Phase 4)
+- **Survey:** about 110 figures across CD 109, CD 123 and CG 501. 7 are charts and 6
+  CD 109 equations can be calculated; the other ~100 figures are layout drawings whose
+  dimensions are in the clause text. Catalogue: `docs/CHARTS.md`.
+- **Tools, not text:** the charts are images, so retrieval can only find the caption. A model
+  asked about one would guess. A tool computes the answer in code and cites the clause (Ben's
+  call: "the most robust way"), the same rule as `check_limit`.
+- **Formula before digitising:** CG 501 Fig 7.5.3N2a/b are reproduced exactly by
+  `G = √(S² + C²)` and `L = W·√(1 + (S/C)²)`, and Fig 9.23N2's bands are printed V²/R
+  boundaries, so those need no digitising. Curves that are data (Fig 7.5.4, 7.5.1, 2.1) are read
+  once by Ben and interpolated linearly. Out-of-range inputs are refused, never extrapolated;
+  results near the line are marked marginal and escalated.
+- **Flowchart:** CG 501 Fig 2.5 asks judgement questions, so no tool; its text will be indexed.
+- Ben's approach: build everything, then drop whatever proves too hard (tier 3 first).
+
