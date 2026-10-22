@@ -90,3 +90,13 @@ def test_query_args_match_the_real_sdk_signature(mode):
     args = query_args(QUERY, vector(), mode, top=5, odata_filter=None)
 
     inspect.signature(SearchClient.search).bind(None, **args)
+
+
+def test_extra_fields_are_selected_and_returned_on_each_hit():
+    doc = _doc("CD109-5.1", 0.9) | {"text": "Gradients shall not exceed...", "page": 24}
+    client = FakeSearchClient([doc])
+
+    (hit,) = search(client, QUERY, vector(), Mode.SEMANTIC, top=1, select=("text", "page", "id"))
+
+    assert client.kwargs["select"] == ["id", "citation_id", "text", "page"]
+    assert hit.fields == {"text": "Gradients shall not exceed...", "page": 24, "id": "CD109-5.1"}

@@ -21,3 +21,11 @@ def embedding_client(settings: Settings, credential: TokenCredential) -> OpenAI:
         api_key=get_bearer_token_provider(credential, COGNITIVE_SERVICES_SCOPE),
         max_retries=OPENAI_MAX_RETRIES,
     )
+
+
+def chat_client(settings: Settings, credential: TokenCredential) -> OpenAI:
+    """OpenAI-compatible client for the chat model, via the Foundry project endpoint."""
+    from azure.ai.projects import AIProjectClient
+
+    project = AIProjectClient(endpoint=settings.project_endpoint, credential=credential)
+    return project.get_openai_client()

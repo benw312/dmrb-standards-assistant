@@ -63,8 +63,9 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 
 ### Phase 3: RAG baseline
 - [ ] [Ben] Write the system prompt (rules in guide p.5)
-- [ ] [CC] `agent/rag.py`: hybrid top-8 → prompt → `Answer` (structured output)
-- [ ] [CC] `agent/citations.py`: cited IDs must be in retrieved chunks, else retry once then escalate
+- [x] [CC] `agent/rag.py`: hybrid top-8 → prompt → `Answer` (structured output); runs once
+      `agent/prompts/system.md` exists
+- [x] [CC] `agent/citations.py`: cited IDs must be in retrieved chunks, else retry once then escalate
 - [ ] [CC] Foundry built-in variant: agent + `AzureAISearchTool`, `vector_semantic_hybrid`
 - [ ] [Ben] Judge the first 10 answers yourself
 - **Done when:** 10 cited answers; "speed limit on a motorway?" → "not covered"
