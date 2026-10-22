@@ -2,18 +2,28 @@
 # Azure setup for the DMRB assistant. Run by hand, never by Claude Code.
 #
 #   SUFFIX=bw01 ./scripts/azure_setup.sh resources   # resource group, AI Search, Document Intelligence
+#   SEARCH_LOCATION=uksouth SUFFIX=bw01 ./scripts/azure_setup.sh resources   # if Search is full in LOCATION
 #   (create the Foundry resource + project + model deployments in the portal, same resource group)
 #   SUFFIX=bw01 FOUNDRY_NAME=<foundry-resource-name> ./scripts/azure_setup.sh roles
 #
 # SUFFIX makes the globally-unique names unique. Use lowercase letters and digits.
+# Safe to re-run: anything that already exists is skipped.
 set -euo pipefail
 
 : "${SUFFIX:?Set SUFFIX to a short lowercase string, e.g. SUFFIX=bw01}"
 
 RG="rg-dmrb-assistant"
 LOCATION="${LOCATION:-swedencentral}"  # must match the resource group's region
+# Search may live in a different region from Foundry: regions can run out of Search capacity
+# (Sweden Central did in Oct 2026), and the cross-region latency is a few milliseconds.
+SEARCH_LOCATION="${SEARCH_LOCATION:-$LOCATION}"
 SEARCH_NAME="srch-dmrb-${SUFFIX}"
 DOCINTEL_NAME="di-dmrb-${SUFFIX}"
+
+# True if the given `az ... show` command finds the resource.
+exists() {
+  "$@" --output none 2>/dev/null
+}
 
 create_resources() {
   # Safe to re-run if you already made the group in the portal (same name and region).
@@ -21,17 +31,25 @@ create_resources() {
 
   # Free tier: 3 indexes, 50 MB, free semantic ranker allowance. aadOrApiKey enables RBAC so
   # code can use DefaultAzureCredential instead of keys.
-  az search service create \
-    --name "$SEARCH_NAME" --resource-group "$RG" --location "$LOCATION" \
-    --sku free --semantic-search free \
-    --auth-options aadOrApiKey --aad-auth-failure-mode http401WithBearerChallenge
+  if exists az search service show --name "$SEARCH_NAME" --resource-group "$RG"; then
+    echo "AI Search $SEARCH_NAME already exists, skipping"
+  else
+    az search service create \
+      --name "$SEARCH_NAME" --resource-group "$RG" --location "$SEARCH_LOCATION" \
+      --sku free --semantic-search free \
+      --auth-options aadOrApiKey --aad-auth-failure-mode http401WithBearerChallenge --output none
+  fi
 
   # S0, not F0: the free tier only analyses the first 2 pages of each document, and DMRB
   # standards run to 50-100 pages. Layout costs roughly $10 per 1,000 pages, so a few dollars.
   # --custom-domain is required for Entra ID (token) auth.
-  az cognitiveservices account create \
-    --name "$DOCINTEL_NAME" --resource-group "$RG" --location "$LOCATION" \
-    --kind FormRecognizer --sku S0 --custom-domain "$DOCINTEL_NAME" --yes
+  if exists az cognitiveservices account show --name "$DOCINTEL_NAME" --resource-group "$RG"; then
+    echo "Document Intelligence $DOCINTEL_NAME already exists, skipping"
+  else
+    az cognitiveservices account create \
+      --name "$DOCINTEL_NAME" --resource-group "$RG" --location "$LOCATION" \
+      --kind FormRecognizer --sku S0 --custom-domain "$DOCINTEL_NAME" --yes --output none
+  fi
 
   echo
   echo "AZURE_SEARCH_ENDPOINT=https://${SEARCH_NAME}.search.windows.net"
