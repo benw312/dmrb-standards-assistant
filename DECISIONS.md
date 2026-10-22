@@ -27,3 +27,21 @@ One entry per design choice: what, alternatives, why. Newest at the bottom.
 
 ## 2026-10-22: `sources.yaml` fails to load while any version is TODO
 - **Why:** The version appears in every citation. A placeholder would pass silently into answers.
+
+## 2026-10-22: check_limit design
+- **Units:** convert within a dimension (mm/m/km, %, km/h) using an explicit table; mixing
+  dimensions raises an error the agent can read and correct. *Alternative:* exact unit match only,
+  but then the model would have to convert, which is arithmetic. **mph is excluded**: its factor
+  makes km/h -> mph inexact, and DMRB design speeds are in km/h. Power-of-ten factors only.
+- **Comparisons:** `<=`, `<`, `>=`, `>` and `between`. `between` is inclusive at both ends because
+  DMRB ranges ("2.5% to 5%") include their end values. Margin is signed headroom to the nearest bound.
+- **Exactness:** `Decimal` throughout, and floats from the model's JSON go through `str()` first,
+  so a value exactly on a limit is judged exactly. No tolerance band: rounding is an engineering
+  judgement, not something to hide in code. Inputs are capped at 15 significant digits and magnitudes of 1e±9,
+  and arithmetic runs in a context that raises on any rounding, so a verdict can never be rounded.
+  (Found in code review: a 29-digit value rounded to the limit under Python's default context.)
+
+## 2026-10-22: GitHub workflow
+- Public repo from day one; `main` is protected (PRs only, CI must pass, linear history,
+  squash merge). Claude Code opens PRs, Ben reviews and merges.
+- Actions pinned to commit SHAs (supply-chain hygiene); Dependabot keeps them and uv deps current.
