@@ -167,4 +167,5 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 3. Phase 4: CD 109 equation tools and `get_clause`/`get_table` are built. Next: the CG 501
    flow-path and Fig 9.23N2 tools after Ben's confirmations, then the chart data format and
    tier 2 once charts are digitised.
-4. Phase 3 plumbing (`agent/rag.py`) reading Ben's system prompt from a file.
+4. Phase 4 agent loop: `search_standards` tool over `index/search.py`, then the Responses-API
+   function-calling loop (max 6 steps, time budget, JSONL traces) using the tools built so far.
