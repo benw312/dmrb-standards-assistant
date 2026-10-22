@@ -122,3 +122,45 @@ guessing. Each rule cites its GG 101 source.
 - **The PDF's footer is checked against `sources.yaml` before the billable call**, using pypdf
   locally. Paying to index the wrong revision is the costliest mistake this step can make.
 - First run: GG 101, CD 109, CD 123, CG 501. 313 pages, about $3.13.
+
+## 2026-10-22: Reading order from line geometry, not DI Markdown
+- **Problem:** DI's Markdown and paragraph order get scrambled around figures. On some pages it
+  merged figure labels, NOTEs, a clause and the page footer into one paragraph (CD 109 p.10:
+  NOTE 2, clause 2.2 and NOTE 1 in one block, before the section heading).
+- **Measured:** clause numbers out of order per document: Markdown 5-14; DI paragraphs 0-1 but
+  4 clauses lost inside merged paragraphs; **line geometry 0, none lost**.
+- **Rule:** rebuild order from DI *lines* sorted by page and vertical centre, then x within a
+  row. Drop lines inside figures, tables and page furniture, plus untagged footers and bare page
+  numbers. Rows are clustered by distance, not by rounding y to bands: a band edge fell between
+  clause 2.2's number and its own text, which glued 118 clauses' first lines onto the previous
+  clause. The verb/numbering check (below) caught it.
+- **Clause starts:** a number in the **left-margin column** (measured per document; all four sit
+  at x = 0.58in). The same numbers elsewhere are wrapped cross-references (x = 1.37in), version
+  numbers or table values.
+
+## 2026-10-22: Chunking rules (Phase 1 decisions)
+- **One chunk per clause**; NOTEs stay with the clause before them (GG 101 Appendix B) but are
+  excluded when classifying the clause's verb.
+- **Self-check:** each clause's strongest verb must match its numbering level (X.X: must/shall,
+  X.X.X: should/may). After the fixes above: **0 mismatches in 595 clauses** across four standards.
+- **Tables are their own chunks** (`CD109-Table-3.5`), linked from clauses that mention them
+  (`refs`), citable as `[CD 109 Table 3.5]`. Chosen by Ben over embedding tables in clauses: big
+  tables would blow the clause token cap, and the Phase 4 `get_table` tool fetches them directly.
+  The caption line printed just above a table beats DI's caption: DI attaches only ~1 in 3 and
+  mislabelled CD 123 Table 5.18a as 5.18b. Tables continued across pages are merged.
+- **Glossary:** Terms, Abbreviations and Symbols tables become one `CD109-Glossary` chunk per
+  document (Ben's choice). Foreword, Introduction and Release notes are not indexed.
+- **Numbering forms seen in real documents:** annex prefixes E/, NI/, S/; appendix clauses A2.1;
+  table numbers 5.18a, A.1 and 6.25N2 (a NOTE's table).
+- **Cap:** ~800 tokens (4 characters per token). Long clauses split at sentence ends into
+  `CD109-1.1#2` parts that keep the same `citation_id`; clauses are never merged.
+- **Code review fixes:** caption lines go to their table, not the clause above; "Table A.1 shows
+  ..." is prose, not a caption; short unpunctuated lines before a clause number are untagged
+  sub-headings; heading-tagged lines that finish an open sentence stay in the clause; mentions
+  of other standards ("CD 127 clause 3.2") are not linked locally; split parts (`#2`) count as
+  their clause in the citation gate. Clauses ending mid-sentence: 32 -> 4 (all checked: list
+  items, a legitimate "greater than 2.5%" ending, and one figure-label leak).
+- **Known gaps:** unnumbered appendix text (e.g. CD 109 Appendix A, coordinated link design) is
+  not indexed; figure axis labels outside DI's figure box can leak into clause text; tables
+  printed as images aren't extracted. ~240 lines per document fall outside any clause, mostly
+  front matter.

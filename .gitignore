@@ -16,8 +16,10 @@ htmlcov/
 # DMRB is Crown copyright: link to the PDFs, don't redistribute them or their full text
 data/pdfs/*
 data/parsed/*
+data/chunks/*
 !data/pdfs/.gitkeep
 !data/parsed/.gitkeep
+!data/chunks/.gitkeep
 
 # Runtime output
 traces/

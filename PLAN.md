@@ -44,11 +44,12 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [x] [CC] Check `sources.yaml` version against the PDF footer during ingest
 - [x] [CC] `ingest/parse.py`: Doc Intelligence `prebuilt-layout` → Markdown, cached in `data/parsed/`
       (4 standards, 313 pages, ~$3.13; footer checked against sources.yaml before paying)
-- [ ] [CC] `ingest/models.py`: `Chunk` Pydantic model (+ `refs`, `requirement_type`)
-- [ ] [CC] `ingest/chunk.py`: split on headings then clause numbers; NOTEs and tables stay with
-      their clause; ~800-token cap (split long clauses, never merge)
-- [ ] [CC] Requirement strength (shall/should/may/note) and cross-reference extraction
-- [ ] [Ben] Decide how NOTEs and tables attach; eyeball 20 chunks against the PDFs
+- [x] [CC] `ingest/models.py`: `Chunk` Pydantic model (+ `refs`, `requirement_type`)
+- [x] [CC] `ingest/layout.py` + `ingest/chunk.py`: reading order from line geometry; clause per
+      chunk, NOTEs attached, tables and glossary as own chunks; ~800-token cap (654 chunks)
+- [x] [CC] Requirement strength (must/shall/should/may/note) and table/clause cross-references
+- [x] [Ben] Decide how NOTEs and tables attach (tables own chunks; glossary only)
+- [ ] [Ben] Eyeball 20 chunks against the PDFs: `data/chunks/review_sample.md`
 - **Done when:** any clause prints by ID with heading path and page; tests pass
 
 ### Phase 2: Index
