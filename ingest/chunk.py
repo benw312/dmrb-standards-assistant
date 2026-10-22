@@ -22,7 +22,7 @@ import sys
 import textwrap
 from collections import Counter
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -37,6 +37,7 @@ from ingest.conventions import (
     note_number,
     parse_clause_number,
 )
+from ingest.fonts import HeadingLevel, level_lookup, read_bold_rows
 from ingest.layout import Item, Line, TableBlock, read_layout
 from ingest.models import Chunk
 from ingest.sources import Source, load_sources
@@ -48,12 +49,14 @@ MARGIN_TOLERANCE_IN = 0.3
 MAX_HEADING_WORDS = 12  # longer "headings" are clause text DI mis-tagged as a heading
 SAME_ROW_IN = 0.1
 CAPTION_MAX_GAP_IN = 3.0  # a caption line further above its table than this isn't its caption
+CAPTION_LINE_GAP_IN = 0.3  # a wrapped caption's next line sits about 0.17in lower
 MAX_UNTAGGED_HEADING_WORDS = 8
 GLOSSARY_HEADERS = frozenset({"term", "abbreviation", "symbol"})
 
 ROOT = Path(__file__).resolve().parent.parent
 PARSED_DIR = ROOT / "data" / "parsed"
 CHUNKS_DIR = ROOT / "data" / "chunks"
+PDF_DIR = ROOT / "data" / "pdfs"
 
 _NAA = "|".join(NAA_COUNTRIES)
 _NUMBER = rf"(?:(?:{_NAA})/)?[A-Z]?\d+(?:\.\d+)*"
@@ -63,6 +66,9 @@ _SECTION_LINE = re.compile(rf"^((?:(?:{_NAA})/)?\d+\.|[A-Z]\d+)(?:\s+(.+))?$")
 _TABLE_NUMBER = rf"(?:(?:{_NAA})/)?[A-Z]?\.?\d+(?:\.\d+)*(?:N\d+|[a-z])?"
 # A caption is "Table N" then a capitalised title; "Table A.1 shows ..." is prose.
 _TABLE_CAPTION = re.compile(rf"^Table\s+({_TABLE_NUMBER})\s+[A-Z(]")
+# Figure and equation captions are text, never headings (both are printed in bold).
+_FIGURE_CAPTION = re.compile(rf"^(?:Figure|Equation)\s+{_TABLE_NUMBER}\s+[A-Z(]")
+_NOTE_LABEL = re.compile(r"^NOTE(?:\s+\d+)?$")
 _TABLE_MENTION = re.compile(rf"\bTables?\s+({_TABLE_NUMBER}(?:\s*(?:,|and|&)\s*{_TABLE_NUMBER})*)")
 _CLAUSE_MENTION = re.compile(rf"\b(?:clause|paragraph)s?\s+({_NUMBER})")
 _LIST_SEPARATOR = re.compile(r"\s*(?:,|\band\b|&)\s*")
@@ -113,11 +119,13 @@ def _margin_x(items: Sequence[Item]) -> float | None:
 class _Walker:
     """Walks lines and tables in reading order, collecting clause, table and glossary drafts."""
 
-    def __init__(self, margin: float | None) -> None:
+    def __init__(self, margin: float | None, heading_level: HeadingLevel | None = None) -> None:
         self.margin = margin
+        self.heading_level = heading_level
         self.section: str | None = None
         self.section_pending_title = False
-        self.subheading: str | None = None
+        self.heading: str | None = None  # 12pt bold
+        self.subheading: str | None = None  # 10pt bold, under `heading`
         self.current: _ClauseDraft | None = None
         self.clauses: list[_ClauseDraft] = []
         self.tables: dict[str, _TableDraft] = {}
@@ -128,7 +136,7 @@ class _Walker:
 
     @property
     def path(self) -> str:
-        return " > ".join(p for p in (self.section, self.subheading) if p)
+        return " > ".join(p for p in (self.section, self.heading, self.subheading) if p)
 
     def _at_margin(self, line: Line) -> bool:
         return self.margin is not None and abs(line.x - self.margin) <= MARGIN_TOLERANCE_IN
@@ -141,18 +149,36 @@ class _Walker:
     def line(self, line: Line, following: Sequence[Item] = ()) -> None:
         if self._at_margin(line) and (m := _CLAUSE_LINE.match(line.text)):
             self._close()
+            self.caption = None  # an unused caption (prose "Table 3.1 shows") can't reach on
             self.current = _ClauseDraft(m.group(1), line.page, line.y, self.path)
             if m.group(2):
                 self.current.lines.append(m.group(2))
         elif self._at_margin(line) and (m := _SECTION_LINE.match(line.text)):
             self._section(m.group(1), m.group(2))
-        elif line.heading and not self._is_clause_text(line):
-            self._heading(line.text)
+        elif self._continues_caption(line, following):
+            # A caption wrapped onto a second line (CD 123 Table 5.18a); DI tags both as headings.
+            caption = self.caption
+            self.caption = replace(caption, text=f"{caption.text} {line.text}", y=line.y)
+        elif _FIGURE_CAPTION.match(line.text) or _NOTE_LABEL.match(line.text):
+            self._clause_text(line)  # never headings, even when tagged or short (Figure 5.6)
         elif _TABLE_CAPTION.match(line.text):
+            # Checked before headings: DI tags some captions as headings, which put "Table
+            # 5.18a ..." and its second line into the heading path.
             self.caption = line  # belongs to the table below, not the clause above
-        elif self._is_untagged_heading(line, following):
-            self._heading(line.text)
-        elif self.current:
+        elif (
+            # Real headings never start lowercase: that's a wrapped figure caption's second
+            # line, tagged as a heading by DI (CD 123 Figure 6.19 "junctions where ...").
+            line.heading
+            and not line.text[:1].islower()
+            and not self._is_clause_text(line)
+            or self._is_untagged_heading(line, following)
+        ):
+            self._heading(line)
+        else:
+            self._clause_text(line)
+
+    def _clause_text(self, line: Line) -> None:
+        if self.current:
             self.current.lines.append(line.text)
         else:
             self.dropped_lines += 1  # foreword, introduction, unnumbered appendix text
@@ -162,20 +188,53 @@ class _Walker:
         if self.section and (self.section == heading or self.section.startswith(f"{number} ")):
             return  # a repeated running header, not a new section
         self._close()
+        self.caption = None
         self.section = heading
         self.section_pending_title = title is None
-        self.subheading = None
+        self.heading = self.subheading = None
 
-    def _heading(self, text: str) -> None:
+    def _level(self, line: Line) -> int | None:
+        return self.heading_level(line.page, line.y, line.text) if self.heading_level else None
+
+    def _heading(self, line: Line) -> None:
+        text = line.text
         if self.section_pending_title:
             self.section = f"{self.section} {text}"
             self.section_pending_title = False
             return
-        self._close()
         if text.startswith("Appendix "):
-            self.section, self.subheading = text, None
-        else:
+            self._close()
+            self.section, self.heading, self.subheading = text, None, None
+            return
+        level = self._level(line)
+        # With fonts, a "heading" that isn't 12pt or 10pt bold is something else DI or the
+        # untagged-heading rule picked up: a running header ("CG 501 Version 2.2.0") or an
+        # inline label. Labels ending in a colon ("Length of curve:") aren't headings either.
+        if (self.heading_level and level is None) or text.endswith(":"):
+            self._clause_text(line)
+            return
+        self._close()
+        if _section_title(self.section) == text:
+            return  # CG 501 repeats "Drainage from adjacent land" under section 6 of that name
+        if level == 2 and self.heading:
             self.subheading = text
+        else:
+            # Level 1, or unknown (no PDF fonts): a heading replaces both levels, as before.
+            self.heading, self.subheading = text, None
+
+    def _continues_caption(self, line: Line, following: Sequence[Item]) -> bool:
+        """A line directly under a pending caption, in line with it, with the table next, and
+        printed like a caption: bold by the fonts, or (without fonts) DI-tagged or lowercase."""
+        c = self.caption
+        if c is None or c.page != line.page or _TABLE_CAPTION.match(line.text):
+            return False
+        below = 0 < line.y - c.y <= CAPTION_LINE_GAP_IN and abs(line.x - c.x) <= SAME_ROW_IN
+        table_next = any(isinstance(i, TableBlock) for i in following[:2])
+        if self.heading_level:
+            looks_like_caption = self._level(line) is not None
+        else:
+            looks_like_caption = line.heading or line.text[:1].islower()
+        return below and table_next and looks_like_caption
 
     def _is_clause_text(self, line: Line) -> bool:
         """DI sometimes tags clause lines as headings; keep them as clause text when they're
@@ -230,6 +289,11 @@ class _Walker:
         self.tables[number] = _TableDraft(
             number, caption, block.page, self.path, block.header, list(block.rows)
         )
+
+
+def _section_title(section: str | None) -> str | None:
+    """'6. Drainage from adjacent land' -> 'Drainage from adjacent land'."""
+    return section.split(" ", 1)[1] if section and " " in section else None
 
 
 def _heading_like(text: str) -> bool:
@@ -407,9 +471,10 @@ class ChunkStats:
 
 
 def build_chunks_with_stats(
-    items: Sequence[Item], source: Source
+    items: Sequence[Item], source: Source, heading_level: HeadingLevel | None = None
 ) -> tuple[list[Chunk], ChunkStats]:
-    walker = _Walker(_margin_x(items))
+    """`heading_level(page, y, text)` gives 1 or 2 from the PDF's fonts (ingest/fonts.py)."""
+    walker = _Walker(_margin_x(items), heading_level)
     for index, item in enumerate(items):
         if isinstance(item, TableBlock):
             walker.table(item)
@@ -425,8 +490,10 @@ def build_chunks_with_stats(
     return chunks, ChunkStats(tuple(walker.skipped_table_pages), walker.dropped_lines)
 
 
-def build_chunks(items: Sequence[Item], source: Source) -> list[Chunk]:
-    return build_chunks_with_stats(items, source)[0]
+def build_chunks(
+    items: Sequence[Item], source: Source, heading_level: HeadingLevel | None = None
+) -> list[Chunk]:
+    return build_chunks_with_stats(items, source, heading_level)[0]
 
 
 # --- Command line ------------------------------------------------------------------------
@@ -498,7 +565,13 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover - file I
             print(f"{source.code:<7} not parsed yet: run python -m ingest.parse")
             continue
         items = read_layout(json.loads(layout_path.read_text()))
-        chunks, stats = build_chunks_with_stats(items, source)
+        pdf = PDF_DIR / source.filename
+        if pdf.exists():
+            levels = level_lookup(read_bold_rows(pdf))
+        else:
+            levels = None
+            print(f"{source.code:<7} PDF not found: headings get one level only")
+        chunks, stats = build_chunks_with_stats(items, source, levels)
         out = CHUNKS_DIR / f"{source.doc_id}.jsonl"
         out.write_text("".join(c.model_dump_json() + "\n" for c in chunks))
         print(_summary(source, chunks, stats))

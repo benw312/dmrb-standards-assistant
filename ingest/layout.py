@@ -74,10 +74,28 @@ def _regions(items: list[dict[str, Any]]) -> dict[int, list[Box]]:
 def _table_block(table: dict[str, Any]) -> TableBlock:
     grid: dict[int, dict[int, str]] = {}
     header_rows = set()
+    spans: list[tuple[int, int, str]] = []
     for cell in table["cells"]:
-        grid.setdefault(cell["rowIndex"], {})[cell["columnIndex"]] = cell["content"].strip()
+        text = cell["content"].strip()
+        row, col = cell["rowIndex"], cell["columnIndex"]
+        grid.setdefault(row, {})[col] = text
+        row_span, col_span = cell.get("rowSpan") or 1, cell.get("columnSpan") or 1
         if cell.get("kind") == "columnHeader":
-            header_rows.add(cell["rowIndex"])
+            header_rows.add(row)
+            # Header rows after the first are flattened into the body, so repeating a tall
+            # header cell down into them would read as data ("Design speed (kph)" as a value).
+            row_span = 1
+        spans += [
+            (r, c, text)
+            for r in range(row, row + row_span)
+            for c in range(col, col + col_span)
+            if (r, c) != (row, col)
+        ]
+    # A merged cell applies to every row and column it spans (CG 501 Table 5.2's verge row
+    # covers both storm columns), so its text is repeated in each rather than left blank.
+    # Filled after all real cells, and only where empty, so a cell DI did report always wins.
+    for r, c, text in spans:
+        grid.setdefault(r, {}).setdefault(c, text)
     width = table.get("columnCount") or 1 + max(c for row in grid.values() for c in row)
     rows = [tuple(grid[r].get(c, "") for c in range(width)) for r in sorted(grid)]
     # Multi-row headers are flattened into the body; the first header row names the columns.

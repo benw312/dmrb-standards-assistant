@@ -523,3 +523,271 @@ def test_read_chunks_names_the_file_and_line_of_a_bad_row(tmp_path):
 
     with pytest.raises(ValueError, match="CD109.jsonl:2: not a valid chunk"):
         read_chunks(tmp_path)
+
+
+# --- Heading levels and captions (CD 123 Version 2.1.0, © Crown copyright, OGL v3.0) --------
+
+CD123 = SOURCE.model_copy(update={"code": "CD 123", "title": "Geometric design of junctions"})
+# What ingest/fonts.py reports for these lines in the real PDF, keyed by (page, text).
+# Anything absent is not bold heading text.
+LEVELS = {
+    (55, "Entry lanes, exit lanes and storage capacity"): 1,
+    (55, "Minor road traffic islands"): 1,
+    (55, "Lane widths"): 2,
+    (55, "Storage length"): 2,
+    (35, "Diverge tapers and auxiliary lanes"): 1,
+    (35, "Table 5.18a Criteria for provision of nearside diverging tapers on A class"): 2,
+    (35, "major roads with a design speed of 85kph or greater"): 2,
+    (47, "SLD and dual carriageway"): 2,
+    (30, "Corner radii and corner radii tapers"): 1,
+}
+
+
+def _level(page: int, y: float, text: str) -> int | None:
+    assert isinstance(y, float)  # the walker passes the line's position through
+    return LEVELS.get((page, text))
+
+
+def _paths(items, levels=_level) -> dict[str, str]:
+    return {c.id: c.heading_path for c in build_chunks(items, CD123, levels)}
+
+
+SIGNALS = [
+    ln(55, 1.0, "7.", x=M, heading=True),
+    ln(55, 1.0, "Geometric design of signal-controlled junctions", heading=True),
+    ln(55, 1.4, "Entry lanes, exit lanes and storage capacity", heading=True),
+    ln(55, 1.7, "Lane widths", heading=True),
+    ln(55, 2.0, "7.7", x=M),
+    ln(55, 2.0, "At new junctions, the minimum width of straight ahead lanes shall be 3.0 metres."),
+    ln(55, 2.4, "Storage length", heading=True),
+    ln(55, 2.7, "7.8", x=M),
+    ln(55, 2.7, "Storage lengths shall accommodate the queue."),
+    ln(55, 3.1, "Minor road traffic islands", heading=True),
+    ln(55, 3.4, "7.9", x=M),
+    ln(55, 3.4, "Physical traffic islands shall have an area of at least 4.5 square metres."),
+]
+
+
+def test_subheadings_sit_under_their_heading_and_headings_reset_them():
+    paths = _paths(SIGNALS)
+
+    section = "7. Geometric design of signal-controlled junctions"
+    assert (
+        paths["CD123-7.7"]
+        == f"{section} > Entry lanes, exit lanes and storage capacity > Lane widths"
+    )
+    assert (
+        paths["CD123-7.8"]
+        == f"{section} > Entry lanes, exit lanes and storage capacity > Storage length"
+    )
+    assert paths["CD123-7.9"] == f"{section} > Minor road traffic islands"
+
+
+def test_without_font_levels_each_heading_replaces_the_last():
+    paths = _paths(SIGNALS, levels=None)
+
+    assert paths["CD123-7.7"] == "7. Geometric design of signal-controlled junctions > Lane widths"
+
+
+DIVERGE = [
+    ln(35, 1.0, "5.", x=M, heading=True),
+    ln(35, 1.0, "Geometric design of priority junctions", heading=True),
+    ln(35, 1.4, "Diverge tapers and auxiliary lanes", heading=True),
+    ln(35, 1.8, "5.18", x=M),
+    ln(35, 1.8, "A nearside diverging taper shall be provided in accordance with Table 5.18a."),
+    # DI tags both caption lines as headings.
+    ln(
+        35,
+        4.64,
+        "Table 5.18a Criteria for provision of nearside diverging tapers on A class",
+        heading=True,
+    ),
+    ln(35, 4.81, "major roads with a design speed of 85kph or greater", heading=True),
+    TableBlock(35, 1.4, 5.0, None, ("Minor road", "Flow"), (("A class", "Yes"),)),
+    ln(35, 7.0, "NOTE", x=M),
+    ln(35, 7.0, "Diverging tapers can also be provided below the thresholds."),
+]
+
+
+def test_a_heading_tagged_two_line_caption_names_its_table_not_the_section():
+    chunks = {c.id: c for c in build_chunks(DIVERGE, CD123, _level)}
+
+    table = chunks["CD123-Table-5.18a"]
+    assert table.text.startswith(
+        "Table 5.18a Criteria for provision of nearside diverging tapers on A class "
+        "major roads with a design speed of 85kph or greater"
+    )
+    expected_path = "5. Geometric design of priority junctions > Diverge tapers and auxiliary lanes"
+    assert table.heading_path == expected_path
+    # The caption no longer closes clause 5.18, so the NOTE after the table stays with it.
+    assert "NOTE Diverging tapers can also be provided" in chunks["CD123-5.18"].text
+
+
+def test_a_line_under_a_caption_without_a_table_next_is_not_caption_text():
+    items = [
+        *DIVERGE[:5],
+        ln(35, 4.64, "Table 5.18a Criteria for provision of nearside diverging tapers"),
+        ln(35, 4.81, "The table applies to A class roads."),  # clause text, then no table
+        ln(35, 5.2, "5.19", x=M),
+        ln(35, 5.2, "Tapers shall be provided."),
+    ]
+
+    chunks = {c.id: c for c in build_chunks(items, CD123, _level)}
+
+    assert "The table applies to A class roads." in chunks["CD123-5.18"].text
+
+
+def test_a_heading_tagged_figure_caption_stays_with_its_clause():
+    # CD 123 p48: a figure caption's second line, tagged as a heading by DI.
+    items = [
+        ln(47, 1.0, "6.", x=M, heading=True),
+        ln(47, 1.0, "Geometric design of major road central treatments", heading=True),
+        ln(47, 1.4, "SLD and dual carriageway", heading=True),
+        ln(47, 7.1, "6.19", x=M),
+        ln(47, 7.1, "A minimum of 3 metres overlap shall be provided."),
+        ln(48, 1.7, "Figure 6.19 Overlap between islands at SLD and dual priority", heading=True),
+        ln(
+            48,
+            1.9,
+            "junctions where the right turn out of the minor road is prevented.",
+            heading=True,
+        ),
+        ln(48, 5.4, "6.20", x=M),
+        ln(48, 5.4, "A physical island shall be provided to separate them."),
+    ]
+
+    chunks = {c.id: c for c in build_chunks(items, CD123, _level)}
+
+    assert chunks["CD123-6.20"].heading_path.endswith("> SLD and dual carriageway")
+    assert chunks["CD123-6.19"].text.endswith("right turn out of the minor road is prevented.")
+
+
+def test_a_short_untagged_figure_caption_before_a_clause_is_not_a_heading():
+    # CD 123 p30: "Figure 5.6 Corner radii" sits just above clause 5.6.1.
+    items = [
+        ln(30, 1.0, "5.", x=M, heading=True),
+        ln(30, 1.0, "Geometric design of priority junctions", heading=True),
+        ln(30, 8.3, "Corner radii and corner radii tapers", heading=True),
+        ln(30, 9.1, "5.6", x=M),
+        ln(30, 9.1, "Corner radii shall be measured in accordance with Figure 5.6."),
+        ln(30, 9.75, "Figure 5.6 Corner radii", x=3.36),
+        ln(31, 1.5, "5.6.1", x=M),
+        ln(31, 1.5, "Corner radii should suit the design vehicle."),
+    ]
+
+    paths = _paths(items)
+
+    assert paths["CD123-5.6.1"].endswith("> Corner radii and corner radii tapers")
+
+
+# --- Lines that look like headings but aren't (found in review) ----------------------------
+
+ROAD_GEOMETRY = [
+    ln(31, 1.0, "7.", x=M, heading=True),
+    ln(31, 1.0, "Road geometry", heading=True),
+    ln(31, 1.4, "Drainage of wide carriageways", heading=True),
+    ln(31, 1.7, "Drainage flow paths", heading=True),
+    ln(31, 2.0, "7.5", x=M),
+    ln(31, 2.0, "Wide carriageways shall be designed to drain."),
+]
+ROAD_LEVELS = {"Drainage of wide carriageways": 1, "Drainage flow paths": 2}
+
+
+def _road_level(page: int, y: float, text: str) -> int | None:
+    return ROAD_LEVELS.get(text)
+
+
+CG501 = SOURCE.model_copy(update={"code": "CG 501", "title": "Design of highway drainage"})
+
+
+def _cg501_paths(extra):
+    return {c.id: c.heading_path for c in build_chunks(ROAD_GEOMETRY + extra, CG501, _road_level)}
+
+
+@pytest.mark.parametrize(
+    "impostor",
+    [
+        ln(35, 1.25, "CG 501 Version 2.2.0", x=1.36),  # running header, untagged, not bold
+        ln(35, 1.25, "Equation 4.2 Superelevation", heading=True),  # bold equation caption
+        ln(35, 1.25, "NOTE", x=M, heading=True),  # DI-tagged NOTE label
+        ln(35, 1.25, "Length of curve:", heading=True),  # inline bold label
+    ],
+    ids=["running-header", "equation", "note-label", "colon-label"],
+)
+def test_impostor_headings_do_not_replace_the_real_ones(impostor):
+    later = [impostor, ln(35, 1.6, "7.5.4", x=M), ln(35, 1.6, "Combinations should be avoided.")]
+
+    paths = _cg501_paths(later)
+
+    assert paths["CG501-7.5.4"] == (
+        "7. Road geometry > Drainage of wide carriageways > Drainage flow paths"
+    )
+
+
+def test_a_heading_repeating_the_section_title_is_skipped():
+    items = [
+        ln(30, 1.0, "6.", x=M, heading=True),
+        ln(30, 1.0, "Drainage from adjacent land", heading=True),
+        ln(30, 1.4, "Drainage from adjacent land", heading=True),
+        ln(30, 1.7, "6.1", x=M),
+        ln(30, 1.7, "Land drainage shall be intercepted."),
+    ]
+    levels = {"Drainage from adjacent land": 1}
+
+    chunks = build_chunks(items, CG501, lambda p, y, t: levels.get(t))
+
+    assert chunks[0].heading_path == "6. Drainage from adjacent land"
+
+
+def test_a_subheading_before_any_heading_acts_as_a_heading():
+    items = [
+        ln(30, 1.0, "6.", x=M, heading=True),
+        ln(30, 1.0, "Drainage from adjacent land", heading=True),
+        ln(30, 1.4, "New and existing connections", heading=True),
+        ln(30, 1.7, "6.1", x=M),
+        ln(30, 1.7, "Connections shall be agreed."),
+    ]
+
+    chunks = build_chunks(items, CG501, lambda p, y, t: 2 if t.startswith("New") else None)
+
+    assert chunks[0].heading_path == "6. Drainage from adjacent land > New and existing connections"
+
+
+def test_a_plain_line_under_a_caption_is_not_joined_even_with_a_table_next():
+    # Only bold lines continue a caption; "(dimensions in metres)" is printed in roman type.
+    items = [
+        *DIVERGE[:5],
+        ln(
+            35,
+            4.64,
+            "Table 5.18a Criteria for provision of nearside diverging tapers on A class",
+            heading=True,
+        ),
+        ln(35, 4.81, "(dimensions in metres)"),
+        TableBlock(35, 1.4, 5.0, None, ("Minor road", "Flow"), (("A class", "Yes"),)),
+    ]
+
+    chunks = {c.id: c for c in build_chunks(items, CD123, _level)}
+
+    assert chunks["CD123-Table-5.18a"].text.startswith(
+        "Table 5.18a Criteria for provision of nearside diverging tapers on A class\n"
+    )
+
+
+def test_an_unused_caption_does_not_carry_into_the_next_clause():
+    items = [
+        *DIVERGE[:5],
+        ln(
+            35,
+            4.0,
+            "Table 5.18a Criteria for provision of nearside diverging tapers on A class",
+            heading=True,
+        ),
+        ln(35, 4.3, "5.19", x=M),
+        ln(35, 4.3, "Tapers shall be provided."),
+        TableBlock(36, 1.4, 1.0, "Table 5.20 Taper lengths", ("Speed", "Length"), (("85", "50"),)),
+    ]
+
+    chunks = {c.id: c for c in build_chunks(items, CD123, _level)}
+
+    assert "CD123-Table-5.20" in chunks and "CD123-Table-5.18a" not in chunks
