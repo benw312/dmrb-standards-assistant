@@ -198,3 +198,32 @@ guessing. Each rule cites its GG 101 source.
 - **Retrieval questions are YAML** (`evals/retrieval.yaml`), not JSONL: Ben writes them by
   hand, and a block per question is easier to copy and edit than one JSON object per line.
   `golden.jsonl` may follow later if it's written the same way.
+
+## 2026-10-22: Fixes from Ben's review of 20 chunks
+- **Three-level heading paths from the PDF's fonts.** DI tags headings without a level, so a
+  subheading replaced its parent (CD 123 cl. 7.7 showed "Lane widths", not "Entry lanes, exit
+  lanes and storage capacity > Lane widths"). Every standard uses 14.3pt bold for section
+  titles, 12pt bold for headings and 10pt bold for subheadings, so `ingest/fonts.py` reads
+  bold text with pypdf (local, free), groups it into rows by position, and a line takes the
+  level of the bold row printed at its own height. Guessing from heading order was rejected:
+  a 12pt heading with no subheading (CD 123 "Minor road traffic islands") would have been
+  nested wrongly. Without the PDF it falls back to one level.
+- **With fonts, only bold 12pt/10pt text can be a heading.** Code review found impostors that
+  replaced real headings: CG 501's running header "CG 501 Version 2.2.0", a "NOTE" label,
+  equation captions ("Equation 4.2 Superelevation") and "Length of curve:". Equation and figure
+  captions, NOTE labels and lines ending in ":" are never headings; a heading that repeats its
+  section title is skipped. Audit against main: every heading name removed was one of these,
+  every name added was a real parent heading that had been overwritten.
+- **Captions win over heading tags, and wrapped captions are joined.** DI tagged both lines of
+  CD 123 Table 5.18a's caption as headings, so the caption's second line became the section
+  name and closed clause 5.18 early, dropping its NOTE. Figure captions are never headings
+  either (CD 123 "Figure 5.6 Corner radii" had become one), and a heading-tagged line starting
+  lowercase is a wrapped caption, not a heading. A second caption line is joined only if it is
+  bold like the caption, so a roman "(dimensions in metres)" stays out.
+- **Merged table cells repeat their text in every spanned cell** (Ben's suggestion for CG 501
+  Table 5.2), so each row reads on its own. Header cells repeat across columns only: copied
+  down, a tall header ("Design speed (kph)") landed in the flattened second header row as if it
+  were data. A cell DI reported is never overwritten by a neighbour's span.
+- **Checked, no change:** the glossary's last three CD 109 terms were in split part
+  `CD109-Glossary#2`, not missing. Chunk pages are physical PDF pages (cover = 1), which is what
+  `#page=N` links need; printed page numbers are one lower. A chunk records its first page only.

@@ -121,3 +121,103 @@ def test_number_and_text_on_one_visual_line_stay_together_across_a_band_edge():
         "2.2",
         "Alignment constraint (Ac) shall be calculated",
     ]
+
+
+def test_merged_cells_repeat_their_text_in_every_spanned_cell():
+    # CG 501 Table 5.2: the Verges row's text spans both storm columns.
+    layout = Layout().table(
+        29,
+        3.0,
+        [["Location", "1-in-1 year", "1-in-5 year"], ["Verges", "Surcharge limited to 1.5 m", ""]],
+        caption="Table 5.2 Storm event requirements",
+    )
+    data = layout.build()
+    data["tables"][0]["cells"] = [
+        c for c in data["tables"][0]["cells"] if not (c["rowIndex"] == 1 and c["columnIndex"] == 2)
+    ]
+    merged = next(c for c in data["tables"][0]["cells"] if c["content"].startswith("Surcharge"))
+    merged["columnSpan"] = 2
+
+    (table,) = read_layout(data)
+
+    assert table.rows == (("Verges", "Surcharge limited to 1.5 m", "Surcharge limited to 1.5 m"),)
+
+
+def test_row_spans_repeat_down_the_rows():
+    layout = Layout().table(
+        35,
+        3.0,
+        [
+            ["Minor road", "Traffic", "Flow"],
+            ["Non A or B", "≥ 600", "Yes"],
+            ["", "≥ 300", "Optional"],
+        ],
+    )
+    data = layout.build()
+    cells = data["tables"][0]["cells"]
+    data["tables"][0]["cells"] = [
+        c for c in cells if not (c["rowIndex"] == 2 and c["columnIndex"] == 0)
+    ]
+    next(c for c in cells if c["content"] == "Non A or B")["rowSpan"] = 2
+
+    (table,) = read_layout(data)
+
+    assert [r[0] for r in table.rows] == ["Non A or B", "Non A or B"]
+
+
+def _table_with(cells, columns=3):
+    return {
+        "pages": [],
+        "paragraphs": [],
+        "figures": [],
+        "tables": [
+            {
+                "rowCount": 1 + max(c["rowIndex"] for c in cells),
+                "columnCount": columns,
+                "cells": cells,
+                "boundingRegions": [{"pageNumber": 1, "polygon": [1, 1, 5, 1, 5, 2, 1, 2]}],
+            }
+        ],
+    }
+
+
+def _cell(row, col, text, header=False, **span):
+    return {"rowIndex": row, "columnIndex": col, "content": text, **span} | (
+        {"kind": "columnHeader"} if header else {}
+    )
+
+
+def test_a_tall_header_cell_is_not_copied_into_the_second_header_row():
+    # CD 123 Table 2.25: "Design speed (kph)" spans both header rows.
+    cells = [
+        _cell(0, 0, "Design speed (kph)", header=True, rowSpan=2),
+        _cell(0, 1, "Stagger distance (metres)", header=True, columnSpan=2),
+        _cell(1, 1, "Ghost island", header=True),
+        _cell(1, 2, "Dual carriageway", header=True),
+        _cell(2, 0, "85"),
+        _cell(2, 1, "50"),
+        _cell(2, 2, "65"),
+    ]
+
+    (table,) = read_layout(_table_with(cells))
+
+    assert table.header == (
+        "Design speed (kph)",
+        "Stagger distance (metres)",
+        "Stagger distance (metres)",
+    )
+    assert table.rows[0] == ("", "Ghost island", "Dual carriageway")
+
+
+def test_a_span_never_overwrites_a_cell_di_reported():
+    cells = [
+        _cell(0, 0, "A", header=True),
+        _cell(0, 1, "B", header=True),
+        _cell(0, 2, "C", header=True),
+        _cell(1, 0, "wide", columnSpan=3),
+        _cell(1, 2, "own text"),
+    ]
+
+    (table,) = read_layout(_table_with(cells))
+
+    assert table.rows == (("wide", "wide", "own text"),)
