@@ -164,3 +164,34 @@ guessing. Each rule cites its GG 101 source.
   not indexed; figure axis labels outside DI's figure box can leak into clause text; tables
   printed as images aren't extracted. ~240 lines per document fall outside any clause, mostly
   front matter.
+
+## 2026-10-22: Search index (Phase 2)
+- **One index field per Chunk attribute**, checked by a test so a new Chunk field can't be
+  forgotten. `text` and `heading_path` are searchable with the `en.microsoft` analyser (better
+  lemmatisation than Lucene's stemmer); `doc_code`, `citation_id`, `kind`, `clause_level`,
+  `requirement_type`, `id` and `refs` are filterable for the Phase 4 tools.
+- **Document key = URL-safe base64 of the chunk ID.** Keys only allow letters, digits, `_`, `-`
+  and `=`, so `CD123-E/1.1#2` can't be used as it is. Base64 is reversible and can't collide; the
+  readable ID stays in the `id` field.
+- **Embedding text = `heading_path` + blank line + `text`.** The heading adds the topic a bare
+  clause often lacks. Document code and title are not included yet (see open question below).
+- **Rebuild recreates the index** rather than updating it, so removed chunks and schema changes
+  never leave stale documents. Everything is embedded *before* the old index is deleted, so a
+  throttled embedding run leaves the working index in place.
+- **Four search modes behind one function** (`index/search.py`): keyword, vector, hybrid (RRF),
+  semantic (hybrid then semantic re-rank). Hybrid and semantic ask for 50 vector candidates
+  because the semantic ranker re-ranks up to 50. Semantic errors fail loudly (no silent fallback
+  to un-reranked results once the free tier's 1,000 queries a month run out).
+- **Recall@k counts distinct clauses**: each search fetches 20 chunks, split parts (`#2`)
+  collapse into their clause, and the top k distinct clauses are scored. Otherwise a mode that
+  returns several parts of one clause would see fewer than k clauses (found by code review).
+  Reported with MRR@k (rank 1 vs rank 5) and coverage@k (share of *all* expected clauses
+  found, which matters when an answer needs a clause and its table).
+- **The eval refuses to run on bad ground truth or a stale index**: an expected clause that no
+  chunk carries, or an index whose IDs differ from `data/chunks/`, stops the run. Either would
+  otherwise show up as a retrieval failure.
+- **A rebuild that fails after deleting the old index says so** (`RebuildError`: "missing or
+  partial, re-run"). A build-then-swap alias would avoid the gap; not worth it for a dev index.
+- **Open (Ben):** questions that name a standard ("Which roads does CD 109 apply to?") can miss,
+  because clause text says "this document", not "CD 109". Option: prefix the embedding text with
+  `CD 109 Highway link design >`. Decide once recall on the real questions is in.

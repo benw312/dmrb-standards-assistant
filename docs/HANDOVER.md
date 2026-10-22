@@ -9,7 +9,7 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 |---|---|
 | 0. Setup | Done. Azure resources live, smoke test 4/4 (`uv run python -m core.smoke_test`) |
 | 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 654 chunks |
-| 2. Index | **Next.** Waiting on Ben's 15 retrieval questions for recall@5 |
+| 2. Index | Index built (654 documents). `evals/recall.py` ready; waiting on Ben's 15 retrieval questions |
 | 3–7 | Not started. `agent/answer.py`, `agent/citations.py`, `agent/tools/check_limit.py` already built and tested for Phases 3–4 |
 
 Open PRs at handover: #12 (chunker) and the PR adding this document.
@@ -46,6 +46,9 @@ uv run python -m core.smoke_test               # live check of all four Azure se
 uv run python -m ingest.parse                  # PDFs -> data/parsed/ (cached; billed per page)
 uv run python -m ingest.chunk                  # data/parsed/ -> data/chunks/*.jsonl + summary
 uv run python -m ingest.chunk --show CD109-2.2 # print one chunk with heading path and page
+uv run python -m index.rebuild                 # embed chunks, recreate the index (~1 min, <1p)
+uv run python -m evals.recall                  # recall@5 per mode on evals/retrieval.jsonl
+uv run python -m evals.recall --modes semantic --k 8
 ```
 
 ## Pipeline
@@ -58,7 +61,9 @@ data/pdfs/*.pdf  (git-ignored; listed in data/sources.yaml)
   -> ingest/layout.py     reading order from line geometry (DI Markdown order is unreliable)
   -> ingest/chunk.py      clause / table / glossary chunks, GG 101 rules from ingest/conventions.py
   -> data/chunks/         <DOC>.jsonl of ingest/models.Chunk (git-ignored)
-  -> index/ (Phase 2)     Azure AI Search hybrid index
+  -> index/rebuild.py     embeds heading_path + text, recreates index `dmrb-clauses`
+  -> index/search.py      keyword | vector | hybrid | semantic (production: semantic)
+  -> evals/recall.py      recall@k and MRR per mode, Markdown table for the README
 ```
 
 Chunk IDs: `CD109-5.3.1` (clause), `CD109-Table-3.5`, `CD109-Glossary`, annex `CD109-E/1.1`,

@@ -13,11 +13,10 @@ from dataclasses import dataclass
 
 from azure.core.credentials import TokenCredential
 
+from core.clients import EMBEDDING_DIMENSIONS, embedding_client
 from core.settings import Settings, SettingsError, load_settings
 
 MAX_DETAIL_CHARS = 300
-EXPECTED_EMBEDDING_DIMENSIONS = 1536  # text-embedding-3-small; the index schema depends on it
-COGNITIVE_SERVICES_SCOPE = "https://cognitiveservices.azure.com/.default"
 
 Check = tuple[str, Callable[[], str]]
 
@@ -76,20 +75,12 @@ def _check_chat(settings: Settings, credential: TokenCredential) -> str:  # prag
 
 
 def _check_embeddings(settings: Settings, credential: TokenCredential) -> str:  # pragma: no cover
-    from azure.identity import get_bearer_token_provider
-    from openai import OpenAI
-
-    # Resource-level endpoint: the project endpoint 404s on embeddings (see Settings).
-    client = OpenAI(
-        base_url=settings.openai_v1_endpoint,
-        api_key=get_bearer_token_provider(credential, COGNITIVE_SERVICES_SCOPE),
-    )
-    result = client.embeddings.create(
+    result = embedding_client(settings, credential).embeddings.create(
         model=settings.embedding_deployment, input="superelevation on a bend"
     )
     dimensions = len(result.data[0].embedding)
-    if dimensions != EXPECTED_EMBEDDING_DIMENSIONS:
-        raise ValueError(f"expected {EXPECTED_EMBEDDING_DIMENSIONS} dimensions, got {dimensions}")
+    if dimensions != EMBEDDING_DIMENSIONS:
+        raise ValueError(f"expected {EMBEDDING_DIMENSIONS} dimensions, got {dimensions}")
     return f"{settings.embedding_deployment} returned {dimensions} dimensions"
 
 
