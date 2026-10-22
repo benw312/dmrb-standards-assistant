@@ -25,6 +25,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from agent.citations import chunk_id, glossary_id, table_id
 from ingest.conventions import (
     DOC_SERIES,
@@ -444,23 +446,37 @@ def _summary(source: Source, chunks: list[Chunk], stats: ChunkStats) -> str:
     )
 
 
+def read_chunks(chunks_dir: Path = CHUNKS_DIR) -> list[Chunk]:
+    """Every chunk in `chunks_dir`/*.jsonl, validated. Raises if an ID appears twice."""
+    chunks, seen = [], set()
+    for path in sorted(chunks_dir.glob("*.jsonl")):
+        for number, raw in enumerate(path.read_text().splitlines(), start=1):
+            if not raw.strip():
+                continue
+            try:
+                chunk = Chunk.model_validate_json(raw)
+            except ValidationError as err:
+                raise ValueError(f"{path.name}:{number}: not a valid chunk ({err})") from None
+            if chunk.id in seen:
+                raise ValueError(f"{path.name}:{number}: duplicate chunk ID {chunk.id!r}")
+            seen.add(chunk.id)
+            chunks.append(chunk)
+    return chunks
+
+
 def _show(chunk_id_: str, out_dir: Path) -> int:  # pragma: no cover - console output
-    for path in sorted(out_dir.glob("*.jsonl")):
-        for raw in path.read_text().splitlines():
-            chunk = Chunk.model_validate_json(raw)
-            if chunk.id == chunk_id_ or chunk.citation_id == chunk_id_:
-                level, verb = chunk.clause_level or "-", chunk.requirement_type or "-"
-                print(f"{chunk.id}  ({chunk.kind}, {level}, {verb})")
-                print(
-                    f"{chunk.doc_code} {chunk.version} | {chunk.heading_path} | page {chunk.page}"
-                )
-                print(f"{chunk.url}")
-                if chunk.refs:
-                    print(f"refs: {', '.join(chunk.refs)}")
-                for warning in chunk.warnings:
-                    print(f"warning: {warning}")
-                print(f"\n{chunk.text}\n")
-                return 0
+    for chunk in read_chunks(out_dir):
+        if chunk.id == chunk_id_ or chunk.citation_id == chunk_id_:
+            level, verb = chunk.clause_level or "-", chunk.requirement_type or "-"
+            print(f"{chunk.id}  ({chunk.kind}, {level}, {verb})")
+            print(f"{chunk.doc_code} {chunk.version} | {chunk.heading_path} | page {chunk.page}")
+            print(f"{chunk.url}")
+            if chunk.refs:
+                print(f"refs: {', '.join(chunk.refs)}")
+            for warning in chunk.warnings:
+                print(f"warning: {warning}")
+            print(f"\n{chunk.text}\n")
+            return 0
     print(f"No chunk {chunk_id_!r} in {out_dir}")
     return 1
 

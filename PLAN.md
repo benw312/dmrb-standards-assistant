@@ -33,7 +33,7 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [ ] [Ben] Start `evals/golden.jsonl` (keep going on weekdays, 20-minute sessions).
       Row: `query, ground_truth, expected_clauses, expected_departure, type`
       (types: lookup, multi_hop, departure, out_of_scope). Target 30–50.
-- [ ] [Ben] Write the 15 retrieval questions with known clause IDs (`evals/retrieval.jsonl`)
+- [ ] [Ben] Write the 20 retrieval questions with known clause IDs (`evals/retrieval.yaml`)
 
 ## Weekend 1: Phases 1–3 → cited answers, recall@5 measured
 
@@ -53,8 +53,9 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - **Done when:** any clause prints by ID with heading path and page; tests pass
 
 ### Phase 2: Index
-- [ ] [CC] `index/schema.py`, `index/rebuild.py` (`python -m index.rebuild`), embed `heading_path + text`
-- [ ] [CC] Semantic ranker config, `evals/recall.py` (recall@5)
+- [x] [CC] `index/schema.py`, `index/rebuild.py` (`python -m index.rebuild`), embed `heading_path + text`
+      (654 documents in `dmrb-clauses`)
+- [x] [CC] Semantic ranker config, `evals/recall.py` (recall@5, MRR; keyword/vector/hybrid/semantic)
 - [ ] [Ben] Decide the embedding text; if recall@5 < ~80%, fix chunking before moving on
 - **Done when:** recall@5 is measured and in the README
 

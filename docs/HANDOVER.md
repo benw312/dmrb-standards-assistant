@@ -9,7 +9,7 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 |---|---|
 | 0. Setup | Done. Azure resources live, smoke test 4/4 (`uv run python -m core.smoke_test`) |
 | 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 654 chunks |
-| 2. Index | **Next.** Waiting on Ben's 15 retrieval questions for recall@5 |
+| 2. Index | Index built (654 documents). `evals/recall.py` ready; waiting on Ben's 20 retrieval questions |
 | 3–7 | Not started. `agent/answer.py`, `agent/citations.py`, `agent/tools/check_limit.py` already built and tested for Phases 3–4 |
 
 Open PRs at handover: #12 (chunker) and the PR adding this document.
@@ -46,6 +46,9 @@ uv run python -m core.smoke_test               # live check of all four Azure se
 uv run python -m ingest.parse                  # PDFs -> data/parsed/ (cached; billed per page)
 uv run python -m ingest.chunk                  # data/parsed/ -> data/chunks/*.jsonl + summary
 uv run python -m ingest.chunk --show CD109-2.2 # print one chunk with heading path and page
+uv run python -m index.rebuild                 # embed chunks, recreate the index (~1 min, <1p)
+uv run python -m evals.recall                  # recall@5 per mode on evals/retrieval.yaml
+uv run python -m evals.recall --modes semantic --k 8
 ```
 
 ## Pipeline
@@ -58,7 +61,9 @@ data/pdfs/*.pdf  (git-ignored; listed in data/sources.yaml)
   -> ingest/layout.py     reading order from line geometry (DI Markdown order is unreliable)
   -> ingest/chunk.py      clause / table / glossary chunks, GG 101 rules from ingest/conventions.py
   -> data/chunks/         <DOC>.jsonl of ingest/models.Chunk (git-ignored)
-  -> index/ (Phase 2)     Azure AI Search hybrid index
+  -> index/rebuild.py     embeds heading_path + text, recreates index `dmrb-clauses`
+  -> index/search.py      keyword | vector | hybrid | semantic (production: semantic)
+  -> evals/recall.py      recall@k and MRR per mode, Markdown table for the README
 ```
 
 Chunk IDs: `CD109-5.3.1` (clause), `CD109-Table-3.5`, `CD109-Glossary`, annex `CD109-E/1.1`,
@@ -73,7 +78,7 @@ Answers cite inline as `[CD 109 cl. 5.3.1]`, `[CD 109 Table 3.5]`, `[CD 109 Glos
 - **After writing code:** run a reviewer subagent, fix its findings with regression tests, then
   open the PR. Every review so far has found real bugs.
 - **Billable `az` commands:** Claude prints them; Ben runs them. Read-only `az` checks are fine.
-- **Ground truth is Ben's:** `evals/golden.jsonl` and `evals/retrieval.jsonl` are written by
+- **Ground truth is Ben's:** `evals/golden.jsonl` and `evals/retrieval.yaml` are written by
   Ben only (Claude may write the code that loads them).
 - **Licence:** DMRB is Crown copyright under the Open Government Licence v3.0. Short attributed
   extracts are fine as test fixtures; PDFs and parsed text stay out of git.
@@ -109,14 +114,12 @@ Answers cite inline as `[CD 109 cl. 5.3.1]`, `[CD 109 Table 3.5]`, `[CD 109 Glos
 ## Next steps
 
 **Ben**
-- Write 15 retrieval questions in `evals/retrieval.jsonl`, one JSON object per line:
-  ```json
-  {"id": "R01", "query": "What is the maximum superelevation on an all-purpose road?", "expected": ["CD 109 cl. <n.n>"], "notes": "optional"}
-  ```
-  `expected` lists every clause or table that counts as a correct hit (any one is enough), in
-  the natural citation form: `"CD 109 cl. 4.5"`, `"CD 109 Table 3.5"`, `"CD 123 cl. E/1.1"`.
-  The loader normalises them. Mix lookups, table values, wording that differs from the
-  standard ("banking on a bend"), and at least one question per standard.
+- Write 20 retrieval questions in `evals/retrieval.yaml`: copy a block, edit it (the file's
+  comments show the layout). `expected` lists every clause or table that counts as a correct
+  hit (any one is enough), in citation form: `CD 109 cl. 4.5`, `CD 109 Table 3.5`,
+  `CD 123 cl. E/1.1`. The loader normalises them and names any bad entry. Mix lookups, table
+  values, wording that differs from the standard ("banking on a bend"), and at least one
+  question per standard.
 - Check the 20 chunks in `data/chunks/review_sample.md` against the PDFs.
 - Add each standard's document page URL to `data/sources.yaml`.
 - Later: `evals/golden.jsonl` (30–50 questions with answers) for Phase 6.
@@ -127,6 +130,6 @@ Answers cite inline as `[CD 109 cl. 5.3.1]`, `[CD 109 Table 3.5]`, `[CD 109 Glos
    Document key must be an encoding of the chunk ID (`/` and `#` aren't valid key characters).
 2. `index/rebuild.py` (`python -m index.rebuild`): embed `heading_path + text`, upload in
    batches of 100, recreate the index from `data/chunks/`.
-3. `evals/recall.py`: load `evals/retrieval.jsonl`, run hybrid + semantic search, report
+3. `evals/recall.py`: load `evals/retrieval.yaml`, run hybrid + semantic search, report
    recall@5 per question and overall; README gets the number. Below ~80%: fix chunking or the
    embedding text before Phase 3.

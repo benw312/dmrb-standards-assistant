@@ -44,9 +44,9 @@ flowchart LR
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0. Setup | Repo, CI, Azure resources (keyless auth) | In progress |
-| 1. Ingest | PDFs → clause chunks with metadata | Not started |
-| 2. Index | Hybrid vector + keyword index, recall@5 | Not started |
+| 0. Setup | Repo, CI, Azure resources (keyless auth) | Done |
+| 1. Ingest | PDFs → clause chunks with metadata | Done: 4 standards, 654 chunks |
+| 2. Index | Hybrid vector + keyword index, recall@5 | Index built; recall@5 awaiting the question set |
 | 3. RAG | Cited answers or refusal | Not started |
 | 4. Agent | Tool-calling loop with traces | Not started |
 | 5. Human review | Confidence gate and escalation | Not started |
@@ -68,6 +68,9 @@ uv run pytest                     # offline tests, no Azure needed
 
 az login                          # all Azure auth is keyless (DefaultAzureCredential + RBAC)
 cp .env.example .env              # fill in endpoints and deployment names
+
+uv run python -m index.rebuild    # embed data/chunks/ and recreate the search index
+uv run python -m evals.recall     # recall@5 per search mode on evals/retrieval.yaml
 ```
 
 Azure resources are created with [`scripts/azure_setup.sh`](scripts/azure_setup.sh) and removed

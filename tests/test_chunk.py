@@ -497,3 +497,29 @@ def test_two_untagged_headings_in_a_row():
 
     assert chunks["CD109-2.2"].text.endswith("where they exist.")
     assert chunks["CD109-2.3"].heading_path.endswith("Scope")
+
+
+def test_read_chunks_loads_every_file_and_rejects_duplicate_ids(tmp_path):
+    from ingest.chunk import read_chunks
+
+    first, second = build_chunks(SCOPE, SOURCE)[:2]
+    (tmp_path / "CD109.jsonl").write_text(first.model_dump_json() + "\n\n")
+    (tmp_path / "CD123.jsonl").write_text(second.model_dump_json() + "\n")
+    (tmp_path / "review_sample.md").write_text("not a chunk file")
+
+    assert [c.id for c in read_chunks(tmp_path)] == [first.id, second.id]
+
+    (tmp_path / "CD123.jsonl").write_text(first.model_dump_json() + "\n")
+    with pytest.raises(ValueError, match="duplicate chunk ID"):
+        read_chunks(tmp_path)
+
+
+def test_read_chunks_names_the_file_and_line_of_a_bad_row(tmp_path):
+    from ingest.chunk import read_chunks
+
+    (tmp_path / "CD109.jsonl").write_text(
+        build_chunks(SCOPE, SOURCE)[0].model_dump_json() + "\n{}\n"
+    )
+
+    with pytest.raises(ValueError, match="CD109.jsonl:2: not a valid chunk"):
+        read_chunks(tmp_path)
