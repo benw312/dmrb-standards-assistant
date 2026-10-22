@@ -19,6 +19,8 @@
       "Edit(./.env)",
       "Edit(./evals/golden.jsonl)",
       "Write(./evals/golden.jsonl)",
+      "Edit(./evals/retrieval.jsonl)",
+      "Write(./evals/retrieval.jsonl)",
       "Bash(cat .env:*)",
       "Bash(az group create:*)",
       "Bash(az search service create:*)",
