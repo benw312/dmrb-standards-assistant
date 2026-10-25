@@ -48,7 +48,7 @@ flowchart LR
 | 1. Ingest | PDFs → clause chunks with metadata | Done: 4 standards, 654 chunks |
 | 2. Index | Hybrid vector + keyword index, recall@5 | Done: semantic recall@5 **100%**, MRR 0.83 (20 questions) |
 | 3. RAG | Cited answers or refusal | Done: 9/10 on a first hand-judged check ([evals/rag_check.md](evals/rag_check.md)) |
-| 4. Agent | Tool-calling loop with traces | In progress: lookup and CD 109 equation tools built |
+| 4. Agent | Tool-calling loop with traces | Built: 10 tools, 6-step loop, JSONL traces; 9/10 first run ([evals/agent_check.md](evals/agent_check.md)) |
 | 5. Human review | Confidence gate and escalation | Not started |
 | 6. Evaluation | Golden set, metrics, model comparison | Not started |
 | 7. Ship | Streamlit demo | Not started |
@@ -88,6 +88,8 @@ cp .env.example .env              # fill in endpoints and deployment names
 
 uv run python -m index.rebuild    # embed data/chunks/ and recreate the search index
 uv run python -m evals.recall     # recall@5 per search mode on evals/retrieval.yaml
+uv run python -m agent.rag "What is the maximum gradient on a motorway?"    # RAG baseline
+uv run python -m agent.loop "Superelevation for R = 510 m at 100 kph, rural?" # agent
 ```
 
 Azure resources are created with [`scripts/azure_setup.sh`](scripts/azure_setup.sh) and removed

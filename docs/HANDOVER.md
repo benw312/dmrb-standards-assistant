@@ -126,6 +126,9 @@ is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
   in your own words; you'll be asked about it.
 - [ ] `evals/rag_check.md`: Claude ran and judged the 10-answer check (9/10). Re-judge as the
   engineer, especially q4 (cl. 6.21 relevance) and q7.
+- [ ] Tool descriptions in `agent/tools/registry.py` (the text the model reads to choose a
+  tool), and `evals/agent_check.md` (agent on the same 10 questions). Read 2-3 traces in
+  `traces/` to see how it searches.
 
 Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as you go.
 

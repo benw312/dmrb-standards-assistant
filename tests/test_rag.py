@@ -260,3 +260,10 @@ def test_an_unreadable_chunk_id_falls_back_to_its_id_as_the_cite():
     odd = Hit("CD109-Diagram-1", "CD109-Diagram-1", 1.0, fields=GRADIENT.fields)
 
     assert 'cite="CD109-Diagram-1"' in format_context([odd])
+
+
+def test_disclaimer_is_appended_once():
+    from agent.rag import DISCLAIMER, with_disclaimer
+
+    assert with_disclaimer("Answer.") == f"Answer.\n\n{DISCLAIMER}"
+    assert with_disclaimer(f"Answer. {DISCLAIMER}\n") == f"Answer.\n\n{DISCLAIMER}"
