@@ -46,12 +46,29 @@ flowchart LR
 |---|---|---|
 | 0. Setup | Repo, CI, Azure resources (keyless auth) | Done |
 | 1. Ingest | PDFs → clause chunks with metadata | Done: 4 standards, 654 chunks |
-| 2. Index | Hybrid vector + keyword index, recall@5 | Index built; recall@5 awaiting the question set |
-| 3. RAG | Cited answers or refusal | Not started |
-| 4. Agent | Tool-calling loop with traces | Not started |
+| 2. Index | Hybrid vector + keyword index, recall@5 | Done: semantic recall@5 **100%**, MRR 0.83 (20 questions) |
+| 3. RAG | Cited answers or refusal | Built: structured answers, citations checked in code, retry then escalate |
+| 4. Agent | Tool-calling loop with traces | In progress: lookup and CD 109 equation tools built |
 | 5. Human review | Confidence gate and escalation | Not started |
 | 6. Evaluation | Golden set, metrics, model comparison | Not started |
 | 7. Ship | Streamlit demo | Not started |
+
+## Retrieval results
+
+Recall on 20 hand-written engineer questions across CD 109, CD 123 and CG 501
+(`uv run python -m evals.recall`). A question counts as a hit if any clause an engineer would
+cite appears in the top 5 distinct clauses; coverage is the share of all expected clauses found.
+
+| | keyword | vector | hybrid | semantic |
+|---|---|---|---|---|
+| **recall@5** | 80% | 90% | 90% | **100%** |
+| MRR@5 | 0.64 | 0.80 | 0.70 | 0.83 |
+| coverage@5 | 71% | 79% | 82% | 80% |
+
+Semantic (hybrid plus Azure's semantic re-ranker) is the production mode. Pure keyword search
+misses paraphrased questions such as "What are the considerations for completing the end of a
+climbing lane?"; the re-ranker recovers them.
+Twenty questions is a small sample: the Phase 6 golden set widens it.
 
 ## Stack
 
