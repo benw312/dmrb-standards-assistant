@@ -14,6 +14,18 @@ CG 501 Figure 2.5 is a decision flowchart, and the plan is to make its text sear
 of building a tool. The other ~100 figures are layout drawings (junctions, road markings,
 signs), whose dimensions are already stated in the clause text.
 
+## Build status (2026-10-25)
+
+| # | Tool | Status |
+|---|---|---|
+| 1–5 | CD 109 Eq 2.2a/b, 2.8.1, 2.8.2, 4.2, 4.13 | **Built** (`agent/tools/equations.py`), wired into the agent as tools |
+| 6 | CG 501 flow path length / gradient | Waiting on Ben: OK to cite the derived formulas? |
+| 7 | CD 109 Fig 9.23N2 overtaking sections | Waiting on Ben: boundary sides, and what applies above V²/R = 20 |
+| 8–10 | CG 501 Fig 7.5.4, 7.5.1; CD 109 Fig 2.1 | Waiting on Ben's digitising; the chart data format and interpolation are built with the first one |
+| flagship | Design speed chain (1 + 3 + 10 + Table 2.3) | After tool 10 |
+| 11–12 | CD 123 Fig 2.3.1; Fig 9.23N2 inset | Waiting on Ben's tier 3 decision |
+| 13 | CG 501 Fig 2.5 flowchart | **Done** as a searchable figure chunk (no tool needed) |
+
 ## Tier 1: formulas (exact, no digitising)
 
 | # | Source | Calculates | Inputs | Requirement it serves | Notes |
