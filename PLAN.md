@@ -114,6 +114,7 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [ ] [CC] CI gate on departure accuracy
 
 ### Phase 7 (minimal): Ship
+- [x] [CC] FastAPI service: `POST /ask` (agent | graph | rag), `GET /health`, OpenAPI docs (`app/api.py`)
 - [ ] [CC] Streamlit app: question box, clause badges → PDF page, review badge, trace expander
 - [ ] [CC] README draft + architecture diagram
 - [ ] [Ben] README design decisions + limitations in your own words; record demo GIF

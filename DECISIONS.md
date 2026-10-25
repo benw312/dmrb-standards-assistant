@@ -380,3 +380,17 @@ guessing. Each rule cites its GG 101 source.
 - **No LangChain model wrapper.** The graph calls the same Azure OpenAI Responses client as
   the loop (keyless, `previous_response_id` chaining). Adding `langchain-openai` would have
   meant a second auth path for no gain.
+
+## 2026-10-25: REST API (`app/api.py`)
+
+- **One endpoint, three engines.** `POST /ask` with `mode` = agent (default), graph or rag, so
+  the Phase 6 comparison and any client use the same contract.
+- **A flagged answer is a 200, not an error.** Needing an engineer is a valid outcome; the
+  response carries `needs_human_review` and the escalation reasons. Azure failures are a
+  502 with no upstream detail (endpoint names stay in the server log).
+- **Sync endpoints.** The Azure SDK clients are synchronous, so `def` endpoints run in
+  FastAPI's thread pool rather than blocking the event loop from `async def`.
+- **The engine is a dependency,** built once from the live clients on first use and replaced
+  by a fake in tests, so the API is tested without Azure.
+- **Left to the platform:** auth, rate limits and quotas go in Azure API Management in front
+  of the service (docs/ARCHITECTURE.md), not in app code.
