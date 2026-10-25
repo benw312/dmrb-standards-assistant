@@ -47,7 +47,7 @@ flowchart LR
 | 0. Setup | Repo, CI, Azure resources (keyless auth) | Done |
 | 1. Ingest | PDFs → clause chunks with metadata | Done: 4 standards, 654 chunks |
 | 2. Index | Hybrid vector + keyword index, recall@5 | Done: semantic recall@5 **100%**, MRR 0.83 (20 questions) |
-| 3. RAG | Cited answers or refusal | Built: structured answers, citations checked in code, retry then escalate |
+| 3. RAG | Cited answers or refusal | Done: 9/10 on a first hand-judged check ([evals/rag_check.md](evals/rag_check.md)) |
 | 4. Agent | Tool-calling loop with traces | In progress: lookup and CD 109 equation tools built |
 | 5. Human review | Confidence gate and escalation | Not started |
 | 6. Evaluation | Golden set, metrics, model comparison | Not started |

@@ -320,3 +320,17 @@ guessing. Each rule cites its GG 101 source.
   format only, plus one replaced duplicate (R08). Flagged in the file and in HANDOVER for Ben.
 - **Caveat:** 20 questions is small, and they were written with the standards open. The
   golden set (Phase 6) adds questions written without the clause list open.
+
+## 2026-10-25: Draft system prompt and the 10-answer check
+
+- **Claude drafted `system.md`** so Phase 3 could close; Ben rewrites it. The domain rules come
+  from GG 101: must (statutory, no departure), shall (departure needed), should (recorded
+  justification, not a departure), relaxations only where explicitly permitted.
+- **Prompt wording moved the check from 6/10 to 9/10.** Each fix answered a specific failure:
+  version in the first sentence; "should" is not a departure; lead with "calculation needed"
+  rather than a value you withdraw; a refusal names no clauses.
+- **The remaining miss is retrieval, not wording.** Table 5.1 came back without cl. 5.1, the
+  "shall" that makes it binding, so the model called the limit advice. A prompt can't fix
+  missing context: Phase 4 expands a retrieved table to the clauses that reference it.
+- **The disclaimer footer belongs in code.** The model dropped it in 3 of 10; a fixed sentence
+  is appended by `render()` from Phase 4, not asked for.
