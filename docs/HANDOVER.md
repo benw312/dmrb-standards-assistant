@@ -14,7 +14,7 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 | 4. Agent | Built. `agent/loop.py` (10 tools, 6 steps, traces) and `agent/graph.py` (LangGraph, pause-for-review); 9/10 first run (`evals/agent_check.md`). Chart tier 2 waits on digitising |
 | 5. Review | Escalation flag only; LangGraph pause is the mechanism for a queue |
 | 6. Eval | Scorer built (`evals/golden.py`); waiting on Ben's `evals/golden.yaml` |
-| 7. Ship | REST API built (`app/api.py`); Streamlit demo not started |
+| 7. Ship | REST API (`app/api.py`) and Streamlit demo (`app/demo.py`) built; demo GIF is Ben's |
 
 Open PRs (stacked, merge in order): #20 retrieval → #21 Phase 3 prompt → #22 agent loop → #23 LangGraph → #24 API.
 
@@ -58,6 +58,7 @@ uv run python -m agent.loop "<question>"       # Phase 4 agent (trace in traces/
 uv run python -m agent.graph "<question>"      # same agent on LangGraph; --mermaid draws it
 uv run uvicorn app.api:app                     # REST API, docs at http://127.0.0.1:8000/docs
 uv run python -m evals.golden                  # score rag/agent/graph on evals/golden.yaml
+uv run streamlit run app/demo.py               # demo UI
 ```
 
 ## Pipeline
@@ -196,8 +197,7 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 
 1. When `evals/golden.yaml` has questions: run `evals.golden`, put the table in the README,
    then the `azure-ai-evaluation` judges over `evals/results/*.jsonl`.
-2. Streamlit demo over `app/api.py`'s `to_response` (question box, clause badges, review
-   badge, trace expander).
+2. Demo: link clause badges to the PDF page once `sources.yaml` has document URLs.
 3. After Ben's confirmations: CG 501 flow-path and Fig 9.23N2 tools; chart data format and
    tier 2 once charts are digitised.
 4. Foundry built-in search-tool variant once the Search connection exists in Foundry.
