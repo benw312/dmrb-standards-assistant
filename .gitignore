@@ -23,6 +23,7 @@ data/chunks/*
 
 # Runtime output
 traces/
+evals/results/
 *.sqlite
 
 .DS_Store

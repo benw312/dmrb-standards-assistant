@@ -1,0 +1,45 @@
+# Golden set: ground truth for Phase 6 answer evaluation, written by Ben (target 30-50).
+# Run: uv run python -m evals.golden          (scores rag, agent and graph side by side)
+# Template created by Claude 2026-10-25; every question below the line is Ben's.
+#
+# To add a question, copy an example block, delete the leading "# " on each line, and edit.
+# - id: unique, e.g. G01, G02 ... (ids starting EXAMPLE are rejected)
+# - query: the question as an engineer would ask it, in double quotes
+# - type: lookup | multi_hop | departure | calculation | out_of_scope
+#     lookup:       one clause or table answers it
+#     multi_hop:    needs a clause plus what it points to (a table, another clause)
+#     departure:    describes a design that may not comply
+#     calculation:  needs an equation (superelevation, transition length, VISI ...)
+#     out_of_scope: the indexed standards don't cover it; the right answer is "not covered"
+# - expected: what a correct answer cites (all of them; scoring measures how many it finds).
+#   Leave it out for out_of_scope.
+# - requirement: strength of the governing clause: must | shall | should | may | note
+#   (optional; leave it out for out_of_scope)
+# - departure: true / false if the question describes a design (required for type
+#   departure); leave it out otherwise. An answer that doesn't mention a departure counts
+#   as "no departure needed".
+# - answer: what a good answer says, in a sentence or two (used by the AI judges and by you)
+# - notes: optional
+# Keep text in double quotes. Indent with two spaces.
+#
+# - id: EXAMPLE-lookup
+#   query: "What is the desirable maximum gradient on an all-purpose dual carriageway?"
+#   type: lookup
+#   expected: [CD 109 cl. 5.1.1, CD 109 Table 5.1]
+#   requirement: should
+#   answer: "4% desirable maximum (should), relaxation to 8%."
+#
+# - id: EXAMPLE-departure
+#   query: "Can I use a 5% gradient on a motorway?"
+#   type: departure
+#   expected: [CD 109 cl. 5.1, CD 109 Table 5.1]
+#   requirement: shall
+#   departure: true
+#   answer: "No: beyond the 4% permitted relaxation, so a Departure from Standard is needed."
+#
+# - id: EXAMPLE-out-of-scope
+#   query: "What's the speed limit on a motorway?"
+#   type: out_of_scope
+#   answer: "Not covered by the DMRB: set by legislation and traffic regulation orders."
+#
+# ---------------------------------------------------------------- Ben's questions below

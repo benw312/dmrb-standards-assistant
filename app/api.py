@@ -22,7 +22,7 @@ import logging
 import threading
 import uuid
 from collections.abc import Callable
-from typing import Annotated, Literal
+from typing import Annotated
 
 from azure.core.exceptions import AzureError
 from fastapi import Depends, FastAPI, HTTPException
@@ -32,6 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent.answer import Confidence, RequirementType
 from agent.citations import CitationError, display_citation
+from agent.engine import Answerer, Mode, build_live_answerer
 from agent.loop import AgentResult
 from agent.rag import RagError, RagResult, with_disclaimer
 from core.settings import SettingsError
@@ -40,8 +41,6 @@ logger = logging.getLogger(__name__)
 
 MAX_QUESTION_CHARS = 1000
 RAG_RETRIEVAL = "semantic search, top 8 (fixed, not chosen by the model)"
-Mode = Literal["agent", "graph", "rag"]
-Answerer = Callable[[str, Mode], AgentResult | RagResult]
 
 
 class AskRequest(BaseModel):
@@ -117,50 +116,6 @@ def to_response(result: AgentResult | RagResult, mode: Mode, request_id: str) ->
         seconds=result.seconds,
         trace_id=(result.trace_id or None) if agent else None,
     )
-
-
-def build_live_answerer() -> Answerer:  # pragma: no cover - wires live Azure clients
-    """Build the Azure clients and return a function answering in any mode.
-
-    The tools are closures over these clients and hold no per-request state, so one set is
-    shared by all worker threads; the OpenAI, httpx and Search clients are thread-safe.
-    """
-    from azure.identity import DefaultAzureCredential
-    from azure.search.documents import SearchClient
-
-    from agent.graph import run_graph
-    from agent.loop import run_agent
-    from agent.rag import answer_question, load_system_prompt, make_retriever
-    from agent.tools.registry import build_tools
-    from agent.trace import JsonlTrace
-    from core.clients import chat_client, embedding_client
-    from core.settings import load_settings
-    from index.embed import embed_texts
-
-    settings = load_settings()
-    system_prompt = load_system_prompt()
-    credential = DefaultAzureCredential()
-    embeddings = embedding_client(settings, credential).embeddings
-
-    def embed(text: str) -> list[float]:
-        return embed_texts(embeddings, settings.embedding_deployment, [text])[0]
-
-    search_client = SearchClient(
-        settings.search_endpoint, settings.search_index, credential=credential
-    )
-    responses = chat_client(settings, credential).responses
-    tools = build_tools(search_client, embed)
-    retrieve = make_retriever(search_client, embed)
-    model = settings.chat_deployment
-
-    def answer(question: str, mode: Mode) -> AgentResult | RagResult:
-        if mode == "rag":
-            return answer_question(question, retrieve, responses, model, system_prompt)
-        runner = run_graph if mode == "graph" else run_agent
-        # Traces go to local disk (traces/); in production they'd go to App Insights.
-        return runner(question, tools, responses, model, system_prompt, trace=JsonlTrace())
-
-    return answer
 
 
 class LazyAnswerer:

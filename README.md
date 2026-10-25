@@ -39,8 +39,9 @@ flowchart LR
   A table found by search brings the clause that makes it binding.
 - **Humans make the call.** Possible Departures from Standard, low confidence, failed citation
   checks and out-of-scope questions are escalated, not answered.
-- **Evaluated, not eyeballed.** A hand-written golden question set measures retrieval recall,
-  citation precision, departure accuracy and refusal accuracy.
+- **Evaluated, not eyeballed.** Hand-written questions measure retrieval recall; a golden set
+  scores citation precision and recall, requirement, departure and refusal accuracy, and
+  cost per question for each pipeline (`python -m evals.golden`).
 
 ## One agent, two orchestrations
 
