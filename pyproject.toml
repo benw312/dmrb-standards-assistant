@@ -10,6 +10,7 @@ dependencies = [
     "azure-ai-projects>=2.9.0",
     "azure-identity>=1.26.0",
     "azure-search-documents>=12.0.0",
+    "langgraph>=1.2.17",
     "openai>=3.36.1",
     "pydantic>=2.14.1",
     "pypdf>=6.21.2",

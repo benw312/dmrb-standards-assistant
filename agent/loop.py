@@ -90,8 +90,8 @@ def agent_instructions(system_prompt: str) -> str:
 
 
 @dataclass
-class _Run:
-    """What one run has gathered so far. Mutable, but private to run_agent."""
+class RunRecord:
+    """What one run has gathered so far (mutable while the run is in progress)."""
 
     evidence: dict[str, None] = field(default_factory=dict)  # ordered set
     calls: list[ToolCall] = field(default_factory=list)
@@ -103,12 +103,37 @@ class _Run:
     previous_id: str | None = None
 
 
-def _function_calls(response: Any) -> list[Any]:
+def parse_kwargs(
+    model: str,
+    instructions: str,
+    tools: Mapping[str, Tool],
+    pending: list[dict],
+    previous_id: str | None,
+    step: int,
+) -> dict[str, Any]:
+    """Arguments for one `responses.parse` call (shared with the LangGraph version)."""
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "instructions": instructions,
+        "input": pending,
+        "tools": [t.schema() for t in tools.values()],
+        "text_format": Answer,
+    }
+    if previous_id:  # Azure rejects previous_response_id=null, so it's only sent from step 2
+        kwargs["previous_response_id"] = previous_id
+    if step == MAX_STEPS:
+        # Tools off on the last step: the model must answer with what it has rather than
+        # ask for one more search and leave the run with nothing.
+        kwargs["tool_choice"] = "none"
+    return kwargs
+
+
+def function_calls(response: Any) -> list[Any]:
     return [item for item in response.output or () if item.type == "function_call"]
 
 
 def _run_calls(
-    calls: Sequence[Any], tools: Mapping[str, Tool], run: _Run, step: int, trace: Trace
+    calls: Sequence[Any], tools: Mapping[str, Tool], run: RunRecord, step: int, trace: Trace
 ) -> list[dict]:
     """Run each requested tool; return the outputs to send back."""
     outputs = []
@@ -132,7 +157,7 @@ def _run_calls(
     return outputs
 
 
-def _check_answer(answer: Answer, run: _Run, step: int, trace: Trace) -> list[dict] | None:
+def _check_answer(answer: Answer, run: RunRecord, step: int, trace: Trace) -> list[dict] | None:
     """Check citations. None means stop (passed, or out of retries); else the retry input."""
     run.answer, run.answers_tried = answer, run.answers_tried + 1
     run.check = verify_citations(answer, run.evidence)
@@ -158,26 +183,15 @@ def _step(
     instructions: str,
     tools: Mapping[str, Tool],
     pending: list[dict],
-    run: _Run,
+    run: RunRecord,
     step: int,
     trace: Trace,
 ) -> list[dict] | None:
     """One model call and what follows it. Returns the next input, or None to stop."""
     started = time.monotonic()
     try:
-        # Azure rejects previous_response_id=null, so it's only sent from step 2.
-        chained = {"previous_response_id": run.previous_id} if run.previous_id else {}
-        # On the last step tools are switched off, so the model must answer with what it has
-        # rather than ask for one more search and leave the run with nothing.
-        last = {"tool_choice": "none"} if step == MAX_STEPS else {}
         response = responses.parse(
-            model=model,
-            instructions=instructions,
-            input=pending,
-            tools=[t.schema() for t in tools.values()],
-            text_format=Answer,
-            **chained,
-            **last,
+            **parse_kwargs(model, instructions, tools, pending, run.previous_id, step)
         )
     except ValidationError as err:
         # Schema-valid output that breaks Answer's rules (seen live: a blank answer).
@@ -194,7 +208,7 @@ def _step(
         return [*outputs, {"role": "user", "content": f"{problem}\n{RETRY_INSTRUCTION}"}]
     run.usage.add(response)
     run.previous_id = response.id
-    calls = _function_calls(response)
+    calls = function_calls(response)
     usage = getattr(response, "usage", None)
     trace.event(
         "model",
@@ -227,7 +241,7 @@ def run_agent(
     trace = trace or NullTrace()
     by_name = {t.name: t for t in tools}
     instructions = agent_instructions(system_prompt)
-    started, run = clock(), _Run()
+    started, run = clock(), RunRecord()
     trace.event("start", question=question, model=model, tools=list(by_name))
     pending: list[dict] | None = [{"role": "user", "content": question}]
     step = 0
@@ -240,12 +254,14 @@ def run_agent(
             break
         step += 1
         pending = _step(responses, model, instructions, by_name, pending, run, step, trace)
-    result = _result(question, run, step, clock() - started, trace.run_id)
+    result = build_result(question, run, step, clock() - started, trace.run_id)
     trace.event("end", steps=step, escalation=result.escalation, seconds=result.seconds)
     return result
 
 
-def _result(question: str, run: _Run, steps: int, seconds: float, trace_id: str) -> AgentResult:
+def build_result(
+    question: str, run: RunRecord, steps: int, seconds: float, trace_id: str
+) -> AgentResult:
     answer, check = run.answer, run.check
     if answer is None:
         answer = FALLBACK_ANSWER

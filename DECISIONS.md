@@ -359,3 +359,24 @@ guessing. Each rule cites its GG 101 source.
   system prompt didn't stop the model silently picking rural; the same rule in the
   `superelevation` tool description did (it now states the assumption).
 - **Cost:** about 3x the tokens of the RAG baseline (~8k vs ~3k per question), ~6 s vs ~4 s.
+
+## 2026-10-25: A LangGraph version of the agent (`agent/graph.py`)
+
+- **Why:** LangGraph is the common framework for agent orchestration, and the loop maps onto
+  it directly. Building both shows what the framework adds, rather than hiding the loop
+  inside it.
+- **Same parts, different control flow.** Tools, `run_tool`, the prompt, the citation gate,
+  `parse_kwargs` and `AgentResult` are shared. Nodes: model, tools, check, limit, review; the
+  step and time limits are a guard on every edge into `model`, including from START.
+- **Parity is tested, not assumed.** On nine scripted runs the graph and the loop produce the
+  same result, send the model identical requests and write the same trace events.
+- **What LangGraph adds here:** with a checkpointer and `pause_for_review`, an escalated run
+  stops before `review` with its state saved, and resumes after an engineer looks. That is
+  the Phase 5 review queue's mechanism.
+- **Checkpoint state is plain JSON.** Code review found that a resumed run returned a
+  malformed result (lists where tuples were expected), and that Pydantic objects in state
+  will be refused by LangGraph's stricter serialiser. Answers and checks are stored as dicts,
+  and the result is re-validated.
+- **No LangChain model wrapper.** The graph calls the same Azure OpenAI Responses client as
+  the loop (keyless, `previous_response_id` chaining). Adding `langchain-openai` would have
+  meant a second auth path for no gain.

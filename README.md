@@ -20,7 +20,7 @@ flowchart LR
     PDF[DMRB PDFs] --> DI[Document Intelligence<br/>clause-level chunks]
     DI --> AIS[(Azure AI Search<br/>hybrid + semantic)]
     Q[Engineer question] --> AG[Agent loop<br/>Azure AI Foundry]
-    AG <-->|function calls| T[Tools<br/>search · get_clause<br/>get_table · check_limit]
+    AG <-->|function calls| T[10 tools<br/>search · get_clause · get_table<br/>CD 109 equations · check_limit]
     T --> AIS
     AG --> G{Confident and<br/>no departure?}
     G -->|yes| A[Cited answer]
@@ -30,15 +30,32 @@ flowchart LR
 
 ## Design principles
 
-- **The model never does arithmetic.** It extracts numbers; `check_limit()` compares them in Python.
+- **The model never does arithmetic.** It supplies the inputs; equation tools (superelevation,
+  transition length, visibility...) and `check_limit()` compute and compare in exact decimals.
 - **Citations are verified in code.** Every clause ID in an answer must be among the retrieved
   chunks, or the answer is rejected.
-- **Clause-level chunking.** One chunk per DMRB clause, with NOTEs and tables kept with their
-  parent clause and tagged by requirement strength (shall / should / may).
+- **Clause-level chunking.** One chunk per DMRB clause with its NOTEs, tagged by requirement
+  strength (must / shall / should / may); tables, figures and the glossary are their own chunks.
+  A table found by search brings the clause that makes it binding.
 - **Humans make the call.** Possible Departures from Standard, low confidence, failed citation
   checks and out-of-scope questions are escalated, not answered.
 - **Evaluated, not eyeballed.** A hand-written golden question set measures retrieval recall,
   citation precision, departure accuracy and refusal accuracy.
+
+## One agent, two orchestrations
+
+The same tools, prompt, citation gate and limits run two ways, and tests check they behave
+identically on the same scripted model:
+
+| | `agent/loop.py` | `agent/graph.py` |
+|---|---|---|
+| Control flow | A plain loop over the Azure OpenAI Responses API | A LangGraph `StateGraph`: model, tools, check, limit and review nodes |
+| Limits | 6 model calls, 90 s, tools off on the last step | Same, as conditional edges |
+| Human review | Escalated answers are flagged | Flagged, and the graph can **pause before review** with a checkpointer and resume after an engineer looks |
+
+The loop is the clearest way to see what an agent is; the graph is what you'd extend
+(parallel tool branches, persistence, human-in-the-loop). `python -m agent.graph --mermaid`
+prints the graph.
 
 ## Progress
 
@@ -72,8 +89,9 @@ Twenty questions is a small sample: the Phase 6 golden set widens it.
 
 ## Stack
 
-Python 3.12 · uv · Azure AI Foundry (`azure-ai-projects` 2.x) · Azure AI Search ·
-Azure AI Document Intelligence · `azure-ai-evaluation` · Pydantic · pytest · GitHub Actions
+Python 3.12 · uv · Azure AI Foundry (`azure-ai-projects` 2.x, Responses API) · Azure AI Search ·
+Azure AI Document Intelligence · LangGraph · `azure-ai-evaluation` · Pydantic · pytest ·
+GitHub Actions
 
 ## Getting started
 
@@ -90,6 +108,7 @@ uv run python -m index.rebuild    # embed data/chunks/ and recreate the search i
 uv run python -m evals.recall     # recall@5 per search mode on evals/retrieval.yaml
 uv run python -m agent.rag "What is the maximum gradient on a motorway?"    # RAG baseline
 uv run python -m agent.loop "Superelevation for R = 510 m at 100 kph, rural?" # agent
+uv run python -m agent.graph "Superelevation for R = 510 m at 100 kph, rural?" # LangGraph agent
 ```
 
 Azure resources are created with [`scripts/azure_setup.sh`](scripts/azure_setup.sh) and removed

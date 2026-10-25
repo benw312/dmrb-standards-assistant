@@ -129,6 +129,8 @@ is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
 - [ ] Tool descriptions in `agent/tools/registry.py` (the text the model reads to choose a
   tool), and `evals/agent_check.md` (agent on the same 10 questions). Read 2-3 traces in
   `traces/` to see how it searches.
+- [ ] `agent/graph.py` (LangGraph version) and `docs/ARCHITECTURE.md`: read both so you can
+  walk an interviewer through them. `uv run python -m agent.graph --mermaid` draws the graph.
 
 Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as you go.
 
