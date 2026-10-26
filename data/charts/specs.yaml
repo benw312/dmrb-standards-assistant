@@ -1,0 +1,34 @@
+# What to read off each chart image (ingest/digitise.py). Written once by looking at the figure:
+# the page, the gridline values (frame included), and where the markers sit. Series are listed
+# bottom to top. The digitiser reads the marker values and writes data/charts/<id>.yaml.
+# tolerance: CLAUDE DRAFT (2026-10-26), about 1% of the y axis, i.e. how closely a person can
+# read the chart. Ben to confirm: within it of the line, a result is "marginal" and reviewed.
+
+- id: CG501-Figure-7.5.4
+  source: CG 501
+  pdf: CG 501 Design of highway drainage systems - Version 2.2.0.pdf
+  page: 37
+  clauses: [CG 501 cl. 7.5.4]
+  x: {name: flow path length, unit: m, gridlines: [0, 5, 10, 15, 20, 25, 30, 35]}
+  y: {name: flow path gradient, unit: "%", gridlines: [0, 0.5, 1, 1.5, 2, 2.5, 3]}
+  series:
+    - {name: minimum desirable, marker_x: [0, 5, 10, 15, 20, 25, 30, 35]}
+  fails: below
+  tolerance: 0.03
+  marker_size_px: 40
+
+- id: CG501-Figure-7.5.1
+  source: CG 501
+  pdf: CG 501 Design of highway drainage systems - Version 2.2.0.pdf
+  page: 32
+  clauses: [CG 501 cl. 7.5.1]
+  x: {name: longitudinal gradient, unit: "%", gridlines: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]}
+  y: {name: carriageway crossfall, unit: "%",
+      gridlines: [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8]}
+  series:
+    - {name: 4 lanes, marker_x: [0, 1, 2, 3, 4]}
+    - {name: 5 lanes, marker_x: [0, 1, 2, 3, 4]}
+    - {name: 6 lanes, marker_x: [0, 1, 2, 3, 4]}
+  fails: below
+  tolerance: 0.02
+  marker_size_px: 40

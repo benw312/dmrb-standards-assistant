@@ -25,6 +25,7 @@ from pydantic import BaseModel, ValidationError
 
 from agent.rag import CONTEXT_FIELDS, format_context
 from agent.tools import equations
+from agent.tools.charts import Chart, CheckChartArgs, check_chart, describe, load_charts
 from agent.tools.check_limit import CheckLimitArgs, check_limit
 from agent.tools.lookup import (
     AmbiguousCitationError,
@@ -157,8 +158,20 @@ _EQUATIONS: tuple[tuple[str, str, type[BaseModel], Callable[..., Any]], ...] = (
 )
 
 
-def build_tools(search_client: SearchAPI, embed: Embed) -> tuple[Tool, ...]:
-    """Every tool the agent can call, bound to the live clients."""
+def _chart_tool(charts: Mapping[str, Chart]) -> Tool:
+    def run(**kwargs: object) -> ToolOutput:
+        result = check_chart(charts, **kwargs)
+        return _model_output(result, result.clauses)
+
+    return Tool("check_chart", describe(charts), CheckChartArgs, run)
+
+
+def build_tools(
+    search_client: SearchAPI, embed: Embed, charts: Mapping[str, Chart] | None = None
+) -> tuple[Tool, ...]:
+    """Every tool the agent can call, bound to the live clients. Charts default to the files
+    in data/charts/; with none there, there's no check_chart tool."""
+    charts = load_charts() if charts is None else charts
     return (
         Tool(
             "search_standards",
@@ -193,6 +206,7 @@ def build_tools(search_client: SearchAPI, embed: Embed) -> tuple[Tool, ...]:
             CheckLimitArgs,
             lambda **kw: _model_output(check_limit(**kw)),
         ),
+        *((_chart_tool(charts),) if charts else ()),
     )
 
 
