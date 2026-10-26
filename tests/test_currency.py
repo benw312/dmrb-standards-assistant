@@ -87,3 +87,53 @@ def test_exit_code_is_2_when_the_site_cant_be_asked(capsys):
 
 def test_status_line_for_each_case():
     assert Status("X", "1", None, None).line().endswith("NOT FOUND on standardsforhighways.co.uk")
+
+
+def test_exit_code_is_0_when_everything_is_current(monkeypatch, capsys):
+    import ingest.currency as currency
+
+    monkeypatch.setattr(currency, "load_sources", lambda: [_source("Revision 1")])
+    assert main([], fetch=_api(_row("1 "))) == 0  # the API pads some revisions
+    assert "current" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("ours", "theirs"),
+    [("Version 2.1.0", "2.1.0"), ("version 2.1.0", " 2.1.0 "), ("Revision 1", "1")],
+)
+def test_version_words_case_and_spacing_are_ignored(ours, theirs):
+    assert check(_source(ours), _api(_row(theirs))).current
+
+
+def test_a_different_version_number_is_not_current():
+    assert not check(_source("Version 2.1.0"), _api(_row("2.1.1"))).current
+
+
+@pytest.mark.parametrize("bad", [{"page": None}, {"page": {"a": 1}}, [1, 2]])
+def test_malformed_pages_are_errors(bad):
+    with pytest.raises(CurrencyError):
+        check(_source(), lambda url: bad)
+
+
+def test_a_row_without_an_issue_date_is_an_error_not_a_guess():
+    row = _row("1")
+    row["resultData"]["DATE_OF_ISSUE"] = None
+    with pytest.raises(CurrencyError, match="DATE_OF_ISSUE"):
+        check(_source(), _api(row, _row("2", issued=ISSUED_2027)))
+
+
+def test_http_get_retries_once_then_reports_the_failure(monkeypatch):
+    import http.client
+
+    import ingest.currency as currency
+
+    calls = []
+
+    def flaky(request, timeout):
+        calls.append(1)
+        raise http.client.IncompleteRead(b"")
+
+    monkeypatch.setattr(currency.urllib.request, "urlopen", flaky)
+    with pytest.raises(CurrencyError, match="couldn't query"):
+        currency.http_get("https://example.org", wait_s=0)
+    assert len(calls) == 2
