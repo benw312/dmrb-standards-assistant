@@ -183,8 +183,16 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
   Until then every `check_chart` answer is flagged for review.
 - [ ] Confirm the reading tolerances in `data/charts/specs.yaml` (CLAUDE DRAFT: 0.03% on
   Fig 7.5.4, 0.02% on Fig 7.5.1). Within that of the line, a result is "marginal".
-- [ ] CD 109 Fig 2.1 is still to digitise (different chart type: dashed lines and speed
-  bands). Claude can attempt it the same way; or digitise the 8 line end points by hand.
+- [ ] **CD 109 Fig 2.1** is machine-read too: run `uv run python -m ingest.digitise_bands`,
+  open `data/charts/check/CD109-Figure-2.1.png` (fitted lines in red, NOTE 2 point in blue)
+  and check the crossing table in `data/charts/design_speed/CD109-Figure-2.1.yaml`. Before
+  the design speed tool, three reading rules:
+  1. Lc 0, 5 and 10 aren't drawn left of Ac 6.6, where only single carriageways can be (dual
+     Ac = 6.6 + B/10). Does a single carriageway never have Lc below 15, or is that region
+     simply not covered? Refuse those inputs?
+  2. Where a line is above the top of the chart (Lc 0 below Ac 8.3, Lc 5 below 6.6): 120A?
+  3. Lc between the drawn lines (e.g. 12 from Table 2.3): interpolate, as the tool does now?
+  Also noticed: the vertical divider is drawn at Ac 6.49, not 6.6.
 - [ ] Superelevation at exactly Table 2.10's "minimum R with adverse camber": the tool says
   camber (cl. 4.1 says "less than", 4.1.1 "greater than", so equality is open). Agree?
 - [ ] Harmonic mean visibility warns below 20 readings (2 km at 100 m spacing, cl. 2.6/2.6.1).
