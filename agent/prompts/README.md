@@ -1,7 +1,8 @@
 # System prompt
 
 `system.md` in this folder is the system prompt for the RAG pipeline (`python -m agent.rag`).
-**Ben writes it**; the pipeline refuses to run until it exists.
+**Ben writes it**; the pipeline refuses to run until it exists. The current file is a Claude
+draft (2026-10-25) for Ben to rewrite.
 
 ## What goes in `system.md` (yours)
 

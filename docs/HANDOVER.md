@@ -121,6 +121,11 @@ is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
   3.2b, 8.7N, 6.8 and Equation 4.13 dropped (drawings aren't indexed; the clause that cites
   them stands in); `CD 109 Table 5.1` added to R02 (it holds the gradient values); R08 was a
   duplicate of R06 and is now a CG 501 climate-change uplift question. Check R08's clauses.
+- [ ] `agent/prompts/system.md`: Claude's draft of your system prompt (GG 101 verbal forms,
+  departures vs justifications, version first, no "what is covered" in refusals). Rewrite it
+  in your own words; you'll be asked about it.
+- [ ] `evals/rag_check.md`: Claude ran and judged the 10-answer check (9/10). Re-judge as the
+  engineer, especially q4 (cl. 6.21 relevance) and q7.
 
 Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as you go.
 
@@ -161,8 +166,7 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 **Other**
 - [ ] Add each standard's document page URL to `data/sources.yaml` (chunk links currently
   point at the site root).
-- [ ] Phase 3: write `agent/prompts/system.md` (what to put in it: `agent/prompts/README.md`),
-  then run `uv run python -m agent.rag "<question>"` on 10 questions and judge the answers.
+- [x] Phase 3: `agent/prompts/system.md` and the 10-answer check (Claude drafts, see top).
 - [ ] Later: `evals/golden.jsonl` (30–50 questions with answers) for Phase 6.
 
 ### Claude Code: next
