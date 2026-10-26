@@ -31,3 +31,6 @@ evals/results/
 # No PDFs anywhere: standards are linked from sources.yaml, and the build guide in docs/
 # is private (mentions employer).
 *.pdf
+
+# Chart overlays contain the figure image
+data/charts/check/
