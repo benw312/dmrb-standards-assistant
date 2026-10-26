@@ -426,3 +426,23 @@ guessing. Each rule cites its GG 101 source.
 - **Model text is sanitised before rendering:** no markdown images (the browser would fetch
   the URL) and `$` shown literally, not as LaTeX.
 - **Tested headless** with Streamlit's AppTest and a fake engine, so the page logic runs in CI.
+
+## 2026-10-26: MCP server (`app/mcp_server.py`)
+
+- **Why:** MCP is how agents and assistants plug in other tools (Claude Desktop, Copilot
+  Studio, watsonx Orchestrate). Serving the assistant over MCP as well as REST shows it as a
+  component other AI systems can use, not only an app.
+- **Two kinds of tool:** `ask_dmrb` runs the whole agent, with the citation gate, departure
+  flag and escalation, and is the one to use for answers. The agent's own tools are exposed
+  with `--with-tools`, for clients composing their own workflow. Their results aren't checked
+  answers, so they're opt-in and each description starts by saying so.
+- **Bounded:** at most 4 calls run at once (an `ask_dmrb` call is several model calls); the
+  agent's step and time limits bound each one.
+- **One engine:** `agent/engine.py` now returns the answerer and the tools built on the same
+  clients (`build_live_engine`), so REST, UI and MCP can't drift apart.
+- **Low-level server, not the decorator API:** the tools already have Pydantic schemas in the
+  registry, so they're listed as-is rather than re-declared as typed functions.
+- **Sync tools in threads:** each call runs via `anyio.to_thread`, so a slow Azure call
+  doesn't block the server.
+- **Checked live:** over stdio, `ask_dmrb` answered the superelevation question (6.93%, three
+  checked citations, 5.9 s).
