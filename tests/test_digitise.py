@@ -30,7 +30,9 @@ def _px(x: float, y: float) -> tuple[float, float]:
     )
 
 
-def _chart(series: dict[str, tuple[str, list[tuple[float, float]]]]) -> Image.Image:
+def _chart(
+    series: dict[str, tuple[str, list[tuple[float, float]]]], lines: bool = True
+) -> Image.Image:
     """A chart like the CG 501 ones: thick frame, thin grid, lines through solid markers,
     and some bold text that must not be read as a marker."""
     im = Image.new("L", (W, H), 255)
@@ -44,7 +46,8 @@ def _chart(series: dict[str, tuple[str, list[tuple[float, float]]]]) -> Image.Im
     d.text((10, TOP), "1.8", fill=0, font_size=28)  # an axis label, left of the frame
     r = SIZE / 2
     for shape, points in series.values():
-        d.line([_px(*p) for p in points], fill=0, width=5)
+        if lines:
+            d.line([_px(*p) for p in points], fill=0, width=5)
         for p in points:
             cx, cy = _px(*p)
             if shape == "circle":
@@ -145,3 +148,17 @@ def test_a_marker_on_a_gridline_or_a_line_crossing_one_still_reads_true():
     readings, _ = read_chart(_spec(on_grid), _chart(on_grid))
     for r, (_, y) in zip(readings, on_grid["s"][1], strict=True):
         assert r.y == pytest.approx(y, abs=0.006), r
+
+
+def test_markers_with_no_line_through_them_are_refused():
+    im = _chart(THREE, lines=False)
+    with pytest.raises(DigitiseError, match="no plotted line"):
+        read_chart(_spec(THREE), im)
+
+
+def test_gridline_values_that_dont_match_the_spacing_are_refused():
+    spec = _spec(THREE).model_copy(
+        update={"y": Axis(name="c", unit="%", gridlines=(0, 0.5, 1.0, 1.5, 3.0))}
+    )
+    with pytest.raises(DigitiseError, match="unevenly spaced"):
+        read_chart(spec, _chart(THREE))

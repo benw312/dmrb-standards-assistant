@@ -20,6 +20,8 @@ from tests.test_search_tool import FakeSearch, _embed
 CHART = {
     "id": "CG501-Figure-7.5.4",
     "status": "checked",
+    "digitised_by": "test",
+    "checked_by": "an engineer",
     "source": "CG 501",
     "page": 37,
     "clauses": ["CG 501 cl. 7.5.4"],
@@ -73,6 +75,17 @@ def test_outside_the_chart_is_refused_not_extrapolated(tmp_path):
         _check(_charts(tmp_path), x=12, y=1)
 
 
+@pytest.mark.parametrize("y", [50, -0.1, 3.01])
+def test_a_y_off_the_chart_is_refused_as_a_likely_unit_slip(tmp_path, y):
+    with pytest.raises(ChartError, match="check the units"):
+        _check(_charts(tmp_path), x=7.5, y=y)
+
+
+def test_checked_data_far_from_the_line_needs_no_review(tmp_path):
+    r = _check(_charts(tmp_path), x=7.5, y=0.8)
+    assert r.warnings == () and not r.needs_review
+
+
 def test_draft_data_always_needs_review(tmp_path):
     r = _check(_charts(tmp_path, status="draft"), x=7.5, y=0.8)
     assert r.verdict == "acceptable" and r.warnings == (DRAFT_WARNING,) and r.needs_review
@@ -100,6 +113,8 @@ def test_unknown_chart_lists_the_ones_there_are(tmp_path):
         ({"curves": {"line": [[0, 1]]}}, "2\\+ points"),
         ({"clauses": ["not a clause"]}, "bad clause citation"),
         ({"id": "CG501-Figure-9.9"}, "doesn't match the file name"),
+        ({"checked_by": None}, "needs checked_by"),
+        ({"curves": {"line": [[0, 1], [5, 4]]}}, "outside the axes"),
     ],
 )
 def test_bad_chart_files_fail_at_load(tmp_path, override, message):
@@ -111,9 +126,9 @@ def test_bad_chart_files_fail_at_load(tmp_path, override, message):
 
 def test_the_description_tells_the_model_each_charts_axes(tmp_path):
     text = describe(_charts(tmp_path))
-    assert (
-        "CG501-Figure-7.5.4 (CG 501 cl. 7.5.4)" in text and "flow path length (m, 0 to 35)" in text
-    )
+    assert "CG501-Figure-7.5.4 (CG 501 cl. 7.5.4)" in text
+    assert "flow path length in m (0 to 10)" in text  # the data's range, not the axis's
+    assert "marginal" in text and "warnings" in text
 
 
 def test_the_agent_gets_check_chart_with_the_clause_as_evidence(tmp_path):

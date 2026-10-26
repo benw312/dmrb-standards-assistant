@@ -38,7 +38,11 @@ CHECK_DIR = CHART_DIR / "check"  # overlays: git-ignored, they contain the Crown
 
 DARK = 128  # grey level below which a pixel counts as ink
 GRIDLINE_FRACTION = 0.5  # a gridline is ink across at least this share of the image
-MARKER_GAP = 0.05  # markers in a series closer than this share of the x range are one marker
+MARKER_GAP = 0.05  # a marker within this share of the x range of a spec x is matched to it
+# Gates: a reading that fails one raises, rather than writing a plausible wrong number.
+MAX_FIT_RESIDUAL = 0.005  # gridline misfit, as a share of the axis range (skewed scan)
+MAX_X_MISMATCH = 0.01  # matched marker's x vs the spec's, as a share of the x range
+MAX_SIDE_DISAGREEMENT = 0.25  # left vs right line readings, as a share of the marker size
 
 
 class DigitiseError(RuntimeError):
@@ -223,7 +227,10 @@ def on_line(
     `plot` is the frame's left and right pixel, so axis labels outside it are never read as
     the line. A run that is exactly a horizontal gridline (`bands`) is skipped. Where the line
     crosses or runs along a gridline the two merge into one run, which is kept: its centre is
-    off by at most half the gridline's width."""
+    off by at most half the gridline's width.
+
+    Raises if there's no line next to the marker, or the two sides disagree: either means
+    the reading can't be trusted, and a wrong number would look just as plausible."""
     estimates = []
     for side in (-1, 1):
         samples = []
@@ -242,8 +249,14 @@ def on_line(
             cols, ys = zip(*samples, strict=True)
             slope, offset = np.polyfit(cols, ys, 1)
             estimates.append(float(slope * marker.px + offset))
+    where = f"marker at pixel ({marker.px:.0f}, {marker.py:.0f})"
     if not estimates:
-        return marker  # no line to read: keep the box centre (shows in the overlay)
+        raise DigitiseError(f"no plotted line found next to the {where}")
+    if len(estimates) == 2 and abs(estimates[0] - estimates[1]) > MAX_SIDE_DISAGREEMENT * size_px:
+        raise DigitiseError(
+            f"the line either side of the {where} disagrees by "
+            f"{abs(estimates[0] - estimates[1]):.0f} px"
+        )
     return Marker(px=marker.px, py=sum(estimates) / len(estimates))
 
 
@@ -270,10 +283,22 @@ def _assign(spec: ChartSpec, found: list[tuple[float, float]]) -> list[Reading]:
             raise DigitiseError(
                 f"{spec.id}: expected {len(wanted)} marker(s) at x = {x}, found {len(here)}"
             )
-        # Spec lists series bottom to top.
+        # Spec lists series bottom to top. Lines that cross or touch would pair up wrongly
+        # here, so a spec must only list series that stay apart (true of the CG 501 charts).
         for s, (x_read, y) in zip(wanted, here, strict=True):
+            if abs(x_read - x) > MAX_X_MISMATCH * span:
+                raise DigitiseError(f"{spec.id}: the marker for x = {x} reads as x = {x_read:.3f}")
             readings.append(Reading(s.name, x, y, x_read))
     return readings
+
+
+def _check_fit(spec: ChartSpec, axis: Axis, fit: Calibration, name: str) -> None:
+    limit = MAX_FIT_RESIDUAL * (axis.gridlines[-1] - axis.gridlines[0])
+    if fit.residual > limit:
+        raise DigitiseError(
+            f"{spec.id}: {name} gridlines are unevenly spaced (misfit {fit.residual:.4f} > "
+            f"{limit:.4f}): wrong gridline values in the spec, or a skewed image"
+        )
 
 
 def read_chart(spec: ChartSpec, image: Image.Image) -> tuple[list[Reading], dict[str, float]]:
@@ -283,6 +308,8 @@ def read_chart(spec: ChartSpec, image: Image.Image) -> tuple[list[Reading], dict
     # Image rows run downwards, so the bottom gridline is the lowest value.
     bands = grid_bands(mask, axis=1)
     cy = calibrate(sorted((b.centre for b in bands), reverse=True), spec.y.gridlines, "y")
+    _check_fit(spec, spec.x, cx, "x")
+    _check_fit(spec, spec.y, cy, "y")
     size, plot = spec.marker_size_px, (columns[0], columns[-1])
     found = [
         (cx.value(m.px), cy.value(m.py))
