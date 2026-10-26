@@ -1,0 +1,61 @@
+# CG501-Figure-7.5.1: machine-read by ingest/digitise.py. DRAFT until an engineer compares
+# data/charts/check/CG501-Figure-7.5.1.png with the figure and sets status: checked.
+id: CG501-Figure-7.5.1
+status: draft
+digitised_by: ingest/digitise.py (machine-read 2026-10-26)
+checked_by: null
+source: CG 501
+page: 32
+clauses:
+- CG 501 cl. 7.5.1
+licence: Contains public sector information licensed under the OGL v3.0
+x:
+  name: longitudinal gradient
+  unit: '%'
+  min: 0.0
+  max: 4.0
+y:
+  name: carriageway crossfall
+  unit: '%'
+  min: 0.0
+  max: 1.8
+fails: below
+tolerance: 0.02
+curves:
+  4 lanes:
+  - - 0.0
+    - 0.915
+  - - 1.0
+    - 0.95
+  - - 2.0
+    - 0.995
+  - - 3.0
+    - 1.045
+  - - 4.0
+    - 1.095
+  5 lanes:
+  - - 0.0
+    - 1.145
+  - - 1.0
+    - 1.215
+  - - 2.0
+    - 1.28
+  - - 3.0
+    - 1.335
+  - - 4.0
+    - 1.37
+  6 lanes:
+  - - 0.0
+    - 1.396
+  - - 1.0
+    - 1.445
+  - - 2.0
+    - 1.51
+  - - 3.0
+    - 1.575
+  - - 4.0
+    - 1.63
+fit:
+  x_fit_residual: 0.0006
+  y_fit_residual: 0.0005
+worst_x_mismatch: 0.0005

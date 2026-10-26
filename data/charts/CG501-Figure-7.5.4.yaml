@@ -1,0 +1,45 @@
+# CG501-Figure-7.5.4: machine-read by ingest/digitise.py. DRAFT until an engineer compares
+# data/charts/check/CG501-Figure-7.5.4.png with the figure and sets status: checked.
+id: CG501-Figure-7.5.4
+status: draft
+digitised_by: ingest/digitise.py (machine-read 2026-10-26)
+checked_by: null
+source: CG 501
+page: 37
+clauses:
+- CG 501 cl. 7.5.4
+licence: Contains public sector information licensed under the OGL v3.0
+x:
+  name: flow path length
+  unit: m
+  min: 0.0
+  max: 35.0
+y:
+  name: flow path gradient
+  unit: '%'
+  min: 0.0
+  max: 3.0
+fails: below
+tolerance: 0.03
+curves:
+  minimum desirable:
+  - - 0.0
+    - 0.146
+  - - 5.0
+    - 0.366
+  - - 10.0
+    - 0.622
+  - - 15.0
+    - 0.912
+  - - 20.0
+    - 1.238
+  - - 25.0
+    - 1.597
+  - - 30.0
+    - 1.994
+  - - 35.0
+    - 2.424
+fit:
+  x_fit_residual: 0.0031
+  y_fit_residual: 0.0
+worst_x_mismatch: 0.009
