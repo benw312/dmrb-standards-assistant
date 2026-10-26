@@ -1,6 +1,10 @@
 # The DMRB documents in the index. Version and publication date are as printed in each PDF's
 # page footer ("Downloaded from ... CD 109 Revision 1, published: Mar-2020").
-# PDFs live in data/pdfs/ under `filename` and are git-ignored; the url is where to get them.
+# PDFs live in data/pdfs/ under `filename` and are git-ignored. `url` is the document's page on
+# standardsforhighways.co.uk (shows its versions and whether it's withdrawn); `pdf_url` downloads
+# the PDF. Both found via the site's API and checked 2026-10-26: the downloads match the local
+# PDFs page for page (only the "Downloaded on" margin stamp differs).
+# `uv run python -m ingest.currency` checks every entry is still the current version.
 # DMRB documents: © Crown copyright, Open Government Licence v3.0.
 # Loading fails while any version is still TODO.
 # text_figures: figures indexed as their own chunk (flowcharts); most figures are drawings.
@@ -10,27 +14,31 @@ sources:
     title: Introduction to the Design Manual for Roads and Bridges
     version: Version 0.1.0
     revision_date: 2021-09-29
-    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    url: https://www.standardsforhighways.co.uk/search/25cefcd4-3464-4e41-8e4f-fffc155723ea
+    pdf_url: https://www.standardsforhighways.co.uk/tses/attachments/by-attachment-id/368e6b0f-e4a9-4cdf-bddb-daf4610e61f8
     filename: GG 101 Introduction to the Design Manual for Roads and Bridges -web.pdf
 
   - code: CD 109
     title: Highway link design
     version: Revision 1
     revision_date: 2020-03-01  # footer says "Mar-2020"; day not given
-    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    url: https://www.standardsforhighways.co.uk/search/c27c55b7-2dfc-4597-923a-4d1b4bd6c9fa
+    pdf_url: https://www.standardsforhighways.co.uk/tses/attachments/by-attachment-id/0c19eb56-5ba4-485a-8860-12bc9fa3b67f
     filename: CD 109 revision 1 Highway link design-web.pdf
 
   - code: CD 123
     title: Geometric design of at-grade priority and signal-controlled junctions
     version: Version 2.1.0
     revision_date: 2021-11-29
-    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    url: https://www.standardsforhighways.co.uk/search/962a81c1-abda-4424-96c9-fe4c2287308c
+    pdf_url: https://www.standardsforhighways.co.uk/tses/attachments/by-attachment-id/bae4a08b-92ea-4496-94fc-8ce938d81181
     filename: CD 123 Geometric design of at-grade priority and signal-controlled junctions Version 2.1.0.pdf
 
   - code: CG 501
     title: Design of highway drainage systems
     version: Version 2.2.0
     revision_date: 2025-09-30
-    url: https://www.standardsforhighways.co.uk/  # TODO: document page
+    url: https://www.standardsforhighways.co.uk/search/4f02552e-710a-493f-9fe9-39ca65c435bf
+    pdf_url: https://www.standardsforhighways.co.uk/tses/attachments/by-attachment-id/47142322-1e97-446a-b68a-9a032a9f5d7b
     filename: CG 501 Design of highway drainage systems - Version 2.2.0.pdf
     text_figures: ["2.5"]  # runoff destination flowchart (cl. 2.10.1, 2.12, 3.2)

@@ -22,7 +22,8 @@ class Source(BaseModel):
     title: str
     version: str
     revision_date: date
-    url: HttpUrl
+    url: HttpUrl  # the document's page on standardsforhighways.co.uk
+    pdf_url: HttpUrl | None = None  # direct PDF download
     filename: str
     # Figures whose text is worth indexing on its own, e.g. a flowchart ("2.5"). Most figures
     # are drawings, so this is a deliberate per-document choice (see docs/CHARTS.md).
