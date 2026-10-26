@@ -73,3 +73,18 @@ def test_engine_failures_are_shown_by_kind(run_demo):
     assert "isn't configured" in at.error[0].value
     at = _ask(run_demo(FakeAnswerer(error=KeyError("x"))), "q?")
     assert "Something went wrong (KeyError)" in at.error[0].value
+
+
+def test_the_page_imports_when_run_as_a_script_from_any_folder(tmp_path):
+    # `streamlit run app/demo.py` puts app/ on the import path, not the repo root, so the
+    # page must find agent/ and core/ itself. AppTest runs inside pytest, whose path hides this.
+    import os
+    import subprocess
+    import sys
+
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONSAFEPATH")}
+    done = subprocess.run(
+        [sys.executable, DEMO], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60
+    )
+    assert "ModuleNotFoundError" not in done.stderr, done.stderr
+    assert done.returncode == 0, done.stderr
