@@ -334,3 +334,28 @@ guessing. Each rule cites its GG 101 source.
   missing context: Phase 4 expands a retrieved table to the clauses that reference it.
 - **The disclaimer footer belongs in code.** The model dropped it in 3 of 10; a fixed sentence
   is appended by `render()` from Phase 4, not asked for.
+
+## 2026-10-25: Phase 4 agent loop (`agent/loop.py`)
+
+- **Loop shape:** Responses API with function tools, conversation chained by
+  `previous_response_id` (only new items sent each step). Max 6 model calls and a 90 s budget;
+  hitting either escalates with the reason. On the last step `tool_choice="none"` forces an
+  answer, so a run can't end with evidence gathered and nothing said.
+- **Same answer contract and citation gate as Phase 3.** The agent's "retrieved" set is every
+  ID its tools returned this run. One retry on a failed check, then escalate.
+- **Tables bring their governing clause.** `search_standards` adds the clauses whose `refs`
+  cite any table it returns (max 4 extra). This fixed the Phase 3 q7 miss (Table 5.1 without
+  cl. 5.1) for one extra filtered query per table.
+- **Tool arguments are validated before binding** against each tool's Pydantic model
+  (`extra="forbid"`). Code review found a model sending `{"client": 1}` would have crashed the
+  run with a TypeError. Any tool failure becomes an error message the model can read; only
+  Azure/OpenAI failures propagate.
+- **Accepted trade-off: calculation tools grant evidence.** A `superelevation` result lets the
+  model cite cl. 4.2-4.4 without having fetched their text, because the code implements them.
+  The model could misquote them; so could it a retrieved clause. `check_limit` grants none,
+  since its `source_clause` is the model's own input. Also accepted: a `#dup2` chunk counts
+  as evidence for its clause number (rare; flagged by `get_clause`).
+- **Fixed sentences in code, rules where the model looks.** "Say what you assumed" in the
+  system prompt didn't stop the model silently picking rural; the same rule in the
+  `superelevation` tool description did (it now states the assumption).
+- **Cost:** about 3x the tokens of the RAG baseline (~8k vs ~3k per question), ~6 s vs ~4 s.

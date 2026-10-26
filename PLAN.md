@@ -78,9 +78,9 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 ## Weekend 2: Phases 4, 6, minimal 7
 
 ### Phase 4: Agent loop
-- [ ] [Ben] Write tool descriptions
-- [ ] [CC] Tools: `search_standards`, `get_clause`, `get_table`, `check_limit`, with arg models
-      (`get_clause`, `get_table`, `check_limit` done; `search_standards` wraps `index/search.py`)
+- [x] [Ben] Write tool descriptions: CC draft in `agent/tools/registry.py`, Ben to rewrite
+- [x] [CC] Tools: `search_standards`, `get_clause`, `get_table`, `check_limit`, with arg models
+      (`search_standards` also pulls in the clauses that cite any table it returns)
 - Calculation tools from charts and equations (catalogue and formulas: `docs/CHARTS.md`).
   Build tier by tier; drop any that prove too hard.
   - [ ] [Ben] Confirm tier 1 formulas and band edges (Fig 9.23N2 sides, CG 501 flow-path formulas);
@@ -95,7 +95,8 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
   - [ ] [CC] Flagship chain: bendiness/VISI/verge/road type -> design speed -> Table 2.10 values
   - [ ] [Ben] Decide tier 3: CD 123 Fig 2.3.1 junction type (build?), Fig 9.23N2 verge inset
   - [x] [CC] CG 501 Fig 2.5 flowchart: indexed as figure chunk `CG501-Figure-2.5` (no tool)
-- [ ] [CC] Responses-API function-calling loop: max 6 steps, time budget, JSONL traces, escalate on limit
+- [x] [CC] Responses-API function-calling loop: max 6 steps, time budget, JSONL traces, escalate on limit
+      (`agent/loop.py`; 10-question check in `evals/agent_check.md`)
 - [ ] [Ben] Read traces, decide what to fix
 
 ### Phase 5 (minimal): single `needs_human_review` flag

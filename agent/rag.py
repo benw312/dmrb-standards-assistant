@@ -141,11 +141,33 @@ def _first_message(question: str, hits: Sequence[Hit]) -> dict:
     }
 
 
+# Shown when no usable answer came back. It cites nothing, so it can't fail the check.
+FALLBACK_ANSWER = Answer(
+    answer="No answer could be produced; an engineer needs to look at this question.",
+    citations=(),
+    requirement_type="not_covered",
+    is_departure=None,
+    confidence="low",
+    needs_human_review=True,
+)
+
+# A fixed sentence is added in code: asked for in the prompt, the model dropped it 3 times in 10.
+DISCLAIMER = "Decision support only; confirm against the current standard."
+
+
+def with_disclaimer(text: str) -> str:
+    """The answer text with the disclaimer as its last line, never twice."""
+    body = text.rstrip()
+    if body.endswith(DISCLAIMER):
+        body = body[: -len(DISCLAIMER)].rstrip()
+    return f"{body}\n\n{DISCLAIMER}"
+
+
 RETRY_INSTRUCTION = "Answer again, citing only the clauses given, in the format required."
 NO_ANSWER = "The model returned no answer (declined, cut short or filtered)."
 
 
-def _retry_message(check: CitationCheck) -> dict:
+def retry_message(check: CitationCheck) -> dict:
     reasons = "\n".join(f"- {r}" for r in check.reasons)
     return {
         "role": "user",
@@ -161,7 +183,7 @@ class _Reply:
 
 
 def _ask(
-    responses: ParseAPI, model: str, system_prompt: str, messages: list[dict], usage: "_Usage"
+    responses: ParseAPI, model: str, system_prompt: str, messages: list[dict], usage: "Usage"
 ) -> _Reply:
     """One model call."""
     try:
@@ -183,7 +205,9 @@ def _ask(
 
 
 @dataclass
-class _Usage:
+class Usage:
+    """Token totals across a question's model calls (shared with the agent loop)."""
+
     input_tokens: int = 0
     output_tokens: int = 0
 
@@ -208,7 +232,7 @@ def answer_question(
     hits = retrieve(question)
     retrieved = tuple(h.chunk_id for h in hits)
     messages: list[dict] = [_first_message(question, hits)]
-    usage = _Usage()
+    usage = Usage()
     answer, check, reasons, attempts = None, None, [], 0
     for attempt in range(1, MAX_ATTEMPTS + 1):
         attempts = attempt
@@ -227,7 +251,7 @@ def answer_question(
         reasons.append(f"Attempt {attempt}: citation check failed: {' '.join(check.reasons)}")
         messages += [
             {"role": "assistant", "content": answer.model_dump_json()},
-            _retry_message(check),
+            retry_message(check),
         ]
     escalation = tuple(reasons)
     return _result(
@@ -242,18 +266,11 @@ def _result(
     retrieved: tuple[str, ...],
     attempts: int,
     escalation: tuple[str, ...],
-    usage: _Usage,
+    usage: Usage,
     seconds: float,
 ) -> RagResult:
     if answer is None:
-        answer = Answer(
-            answer="No answer could be produced; an engineer needs to look at this question.",
-            citations=(),
-            requirement_type="not_covered",
-            is_departure=None,
-            confidence="low",
-            needs_human_review=True,
-        )
+        answer = FALLBACK_ANSWER
         check = verify_citations(answer, retrieved)
     if escalation:
         # Never show a failed answer as if it passed: the flag travels with it.
@@ -288,7 +305,7 @@ def render(result: RagResult) -> str:
     banner = ["UNVERIFIED: failed the checks below; an engineer must review it.", ""]
     lines = [
         *(banner if result.escalation else []),
-        a.answer,
+        with_disclaimer(a.answer),
         "",
         f"requirement: {a.requirement_type} | confidence: {a.confidence} | "
         f"departure: {a.is_departure} | human review: {result.needs_human_review}",
