@@ -98,6 +98,8 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [x] [CC] Responses-API function-calling loop: max 6 steps, time budget, JSONL traces, escalate on limit
       (`agent/loop.py`; 10-question check in `evals/agent_check.md`)
 - [ ] [Ben] Read traces, decide what to fix
+- [x] [CC] LangGraph version of the same agent (`agent/graph.py`): same tools and gate, tested
+      for identical behaviour; can pause before engineer review (checkpointer)
 
 ### Phase 5 (minimal): single `needs_human_review` flag
 - Escalate on: departure (possible), low confidence, citation check failed, conflicting versions,
