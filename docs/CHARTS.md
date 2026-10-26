@@ -14,14 +14,15 @@ CG 501 Figure 2.5 is a decision flowchart, and the plan is to make its text sear
 of building a tool. The other ~100 figures are layout drawings (junctions, road markings,
 signs), whose dimensions are already stated in the clause text.
 
-## Build status (2026-10-25)
+## Build status (2026-10-26)
 
 | # | Tool | Status |
 |---|---|---|
 | 1–5 | CD 109 Eq 2.2a/b, 2.8.1, 2.8.2, 4.2, 4.13 | **Built** (`agent/tools/equations.py`), wired into the agent as tools |
 | 6 | CG 501 flow path length / gradient | Waiting on Ben: OK to cite the derived formulas? |
 | 7 | CD 109 Fig 9.23N2 overtaking sections | Waiting on Ben: boundary sides, and what applies above V²/R = 20 |
-| 8–10 | CG 501 Fig 7.5.4, 7.5.1; CD 109 Fig 2.1 | Waiting on Ben's digitising; the chart data format and interpolation are built with the first one |
+| 8–9 | CG 501 Fig 7.5.4, 7.5.1 | **Built** as `check_chart` (`agent/tools/charts.py`). Data machine-read by `ingest/digitise.py`: draft until Ben checks the overlays |
+| 10 | CD 109 Fig 2.1 | To do: dashed lines on speed bands need their own reading method |
 | flagship | Design speed chain (1 + 3 + 10 + Table 2.3) | After tool 10 |
 | 11–12 | CD 123 Fig 2.3.1; Fig 9.23N2 inset | Waiting on Ben's tier 3 decision |
 | 13 | CG 501 Fig 2.5 flowchart | **Done** as a searchable figure chunk (no tool needed) |
@@ -93,10 +94,30 @@ band, then on to Table 2.10's stopping sight distance and radii for that band.
   - the worked examples printed in the standards (Fig 2.1 NOTE 2; the bendiness NOTE) must
     pass;
   - the tier 1 formulas must reproduce the chart points within reading tolerance.
-- **Digitising** (Ben): [WebPlotDigitizer](https://automeris.io) is free and runs in the
-  browser. Screenshot the figure (the images are ~300 dpi), set the axes from two known ticks,
-  then click the markers. The CG 501 charts plot markers at whole-number values, so the points
-  can be read straight off.
+- **Digitising:** automated for marker charts by `ingest/digitise.py` (below). By hand,
+  [WebPlotDigitizer](https://automeris.io) is free and runs in the browser.
+
+## Machine-reading the charts (`ingest/digitise.py`)
+
+The charts are raster images (about 300 dpi) inside the PDFs, not vector drawings, so values
+come from pixels. A person writes a short spec per chart in `data/charts/specs.yaml` (page,
+gridline values, where the markers sit); the code does the rest:
+
+1. **Axes:** gridlines are rows / columns of ink across most of the image. A straight-line fit
+   of their pixel positions to the spec's values calibrates each axis; a misfit over 0.5% of
+   the axis (wrong values in the spec, or a skewed scan) stops the run.
+2. **Markers:** eroding the ink with a square about half a marker wide removes every line and
+   letter, leaving the solid markers.
+3. **Values:** each value is read where the *plotted line* passes the marker's x, from each
+   side separately (the line bends at markers). That's shape-independent: a triangle's box
+   centre sits about 0.01 below its true value on Fig 7.5.1, the line doesn't. No line, sides
+   that disagree, or a marker off its expected x all stop the run rather than write a guess.
+4. **Check:** an overlay with each reading drawn on the figure goes to
+   `data/charts/check/` (git-ignored: it contains the figure). The YAML is `status: draft`
+   until an engineer compares them and records `checked_by`.
+
+On Fig 7.5.4 and 7.5.1 the gridline fit is within 0.003 of the axis values, and the readings
+agree with a by-eye read to within one pixel (about 0.006).
 
 ## Scaling to the whole DMRB
 

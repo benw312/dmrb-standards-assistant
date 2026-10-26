@@ -1,7 +1,7 @@
 # Handover: where the project stands
 
 Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DECISIONS.md`
-(why things are the way they are). Last updated 2026-10-25, Phases 2–4 built.
+(why things are the way they are). Last updated 2026-10-26: Phases 2–4 built, two charts machine-read.
 
 ## Status
 
@@ -11,7 +11,7 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 | 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 656 chunks; Ben's 20-chunk review fixed (PR #15) |
 | 2. Index | Done. 657 documents; semantic recall@5 100%, MRR 0.83 on 20 questions (README) |
 | 3. RAG | Done. `agent/rag.py`, 9/10 on the hand check (`evals/rag_check.md`); prompt is a Claude draft |
-| 4. Agent | Built. `agent/loop.py` (10 tools, 6 steps, traces) and `agent/graph.py` (LangGraph, pause-for-review); 9/10 first run (`evals/agent_check.md`). Chart tier 2 waits on digitising |
+| 4. Agent | Built. `agent/loop.py` (11 tools, 6 steps, traces) and `agent/graph.py` (LangGraph, pause-for-review); 9/10 first run (`evals/agent_check.md`). `check_chart` reads CG 501 Fig 7.5.1 / 7.5.4 (machine-read drafts, Ben to check) |
 | 5. Review | Escalation flag only; LangGraph pause is the mechanism for a queue |
 | 6. Eval | Scorer built (`evals/golden.py`); waiting on Ben's `evals/golden.yaml` |
 | 7. Ship | REST API (`app/api.py`) and Streamlit demo (`app/demo.py`) built; demo GIF is Ben's |
@@ -51,6 +51,7 @@ uv run python -m ingest.parse                  # PDFs -> data/parsed/ (cached; b
 uv run python -m ingest.chunk                  # data/parsed/ -> data/chunks/*.jsonl + summary
 uv run python -m ingest.chunk --show CD109-2.2 # print one chunk with heading path and page
 uv run python -m index.rebuild                 # embed chunks, recreate the index (~1 min, <1p)
+uv run python -m ingest.digitise               # chart images -> data/charts/<id>.yaml + check overlays
 uv run python -m evals.recall                  # recall@5 per mode on evals/retrieval.yaml
 uv run python -m evals.recall --modes semantic --k 8
 uv run python -m agent.rag "<question>"        # Phase 3 RAG baseline
@@ -175,12 +176,25 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
   in, and what applies above V²/R = 20.
 - [ ] Decide tier 3: build CD 123 Fig 2.3.1 (junction type by flows, flagged approximate)? How
   is the Fig 9.23N2 verge-width inset read, or drop it?
-- [ ] Digitise CG 501 Fig 7.5.4 and Fig 7.5.1, and CD 109 Fig 2.1, with WebPlotDigitizer
-  (how-to in `docs/CHARTS.md`). Not needed until the tier 2 tools are built.
+- [ ] **Check the machine-read charts** (no digitising needed for these two): run
+  `uv run python -m ingest.digitise`, open `data/charts/check/CG501-Figure-7.5.4.png` and
+  `...-7.5.1.png`, and compare the red crosses and values with the figures. If right, set
+  `status: checked` and `checked_by: Ben Wallbridge` in each `data/charts/<id>.yaml`.
+  Until then every `check_chart` answer is flagged for review.
+- [ ] Confirm the reading tolerances in `data/charts/specs.yaml` (CLAUDE DRAFT: 0.03% on
+  Fig 7.5.4, 0.02% on Fig 7.5.1). Within that of the line, a result is "marginal".
+- [ ] CD 109 Fig 2.1 is still to digitise (different chart type: dashed lines and speed
+  bands). Claude can attempt it the same way; or digitise the 8 line end points by hand.
 - [ ] Superelevation at exactly Table 2.10's "minimum R with adverse camber": the tool says
   camber (cl. 4.1 says "less than", 4.1.1 "greater than", so equality is open). Agree?
 - [ ] Harmonic mean visibility warns below 20 readings (2 km at 100 m spacing, cl. 2.6/2.6.1).
-  Is that the right trigger?
+  Is that the right trigger? cl. 2.6.1 says both directions, so it may want 40 (20 each way).
+- [ ] **Superelevation just below the 2.5% radius** (found in the equation check,
+  `evals/equation_check.md`): Equation 4.2 gives *less* than 2.5% on a band of radii where a
+  larger radius gets 2.5% under cl. 4.1: 100 kph R 1414–1439 m (2.46%), 70 kph R 693–719 m
+  (2.41%), 50 kph R 354–359 m (2.46%). Floor it at 2.5%, or report Equation 4.2 as printed?
+- [ ] cl. 2.8.3 gives typical VISI values for preliminary route analysis (700 / 500 / 300 m).
+  Worth adding to the visibility tool as an option?
 - [ ] Note: CD 109 cl. 9.24 and 6.9 cite "Figure 9.24N2", which doesn't exist (it's 9.23N2).
   Worth knowing if you report errata.
 
@@ -198,6 +212,6 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 1. When `evals/golden.yaml` has questions: run `evals.golden`, put the table in the README,
    then the `azure-ai-evaluation` judges over `evals/results/*.jsonl`.
 2. Demo: link clause badges to the PDF page once `sources.yaml` has document URLs.
-3. After Ben's confirmations: CG 501 flow-path and Fig 9.23N2 tools; chart data format and
-   tier 2 once charts are digitised.
+3. After Ben's confirmations: CG 501 flow-path and Fig 9.23N2 tools; CD 109 Fig 2.1 and the
+   design speed chain (bendiness -> Ac -> Fig 2.1 with Table 2.3's Lc -> design speed).
 4. Foundry built-in search-tool variant once the Search connection exists in Foundry.

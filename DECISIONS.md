@@ -426,3 +426,20 @@ guessing. Each rule cites its GG 101 source.
 - **Model text is sanitised before rendering:** no markdown images (the browser would fetch
   the URL) and `$` shown literally, not as LaTeX.
 - **Tested headless** with Streamlit's AppTest and a fake engine, so the page logic runs in CI.
+
+## 2026-10-26: charts are machine-read, then checked by an engineer
+
+- **Why not digitise by hand:** the CG 501 charts plot solid markers on a regular grid, so the
+  values can be read from pixels more precisely than by clicking (`ingest/digitise.py`; method
+  in `docs/CHARTS.md`). The engineer's job becomes checking an overlay, not reading 23 points.
+- **Read the line, not the marker:** the data point is where the plotted line passes the
+  marker. A marker's box centre is wrong for triangles (about 0.01 on Fig 7.5.1).
+- **Fail, don't guess:** no line beside a marker, sides that disagree, a marker off its x, or
+  unevenly spaced gridlines stop the run. A plausible wrong number is the failure to avoid.
+- **Drafts stay flagged:** chart YAML is `status: draft` until `checked_by` is filled in, and
+  every `check_chart` result on draft data needs review.
+- **One generic tool:** `check_chart` interpolates any chart file, refuses inputs off the
+  chart (x outside the data, y off the axis: usually a unit slip), and calls results within
+  the reading tolerance "marginal". Adding a chart is a data change.
+- **Dependency:** `pdfplumber` (MIT; brings `pypdfium2`) as a dev dependency, only for reading
+  the images out of the PDFs.
