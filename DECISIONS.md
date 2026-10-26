@@ -426,3 +426,18 @@ guessing. Each rule cites its GG 101 source.
 - **Model text is sanitised before rendering:** no markdown images (the browser would fetch
   the URL) and `$` shown literally, not as LaTeX.
 - **Tested headless** with Streamlit's AppTest and a fake engine, so the page logic runs in CI.
+
+## 2026-10-26: source links from the DMRB site's API, and a weekly currency check
+
+- **Links:** `url` in `data/sources.yaml` is each document's page on standardsforhighways.co.uk
+  (`/search/<nodeId>`), which shows its versions and any withdrawal; `pdf_url` downloads the
+  PDF. Found through the API the site's own pages call (`/tses/v2/search`). Each download
+  matched the local PDF page for page; only the "Downloaded on" margin stamp differs.
+- **Chunk links** still append `#page=N`. The PDF is served as a download, so no link can
+  open a page directly; the page number is kept for the reader. They update on the next
+  `ingest.chunk` + index rebuild.
+- **Currency check:** `uv run python -m ingest.currency` asks the site whether each indexed
+  version is still the latest and not withdrawn; exit 1 if not. A weekly GitHub Action runs
+  it. Citing a superseded standard is worse than refusing, so this fails loudly.
+- **Trade-off:** the API isn't published or versioned. A change to it makes the check error
+  (exit 2), never report "all current".
