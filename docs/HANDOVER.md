@@ -13,7 +13,7 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 | 3. RAG | Done. `agent/rag.py`, 9/10 on the hand check (`evals/rag_check.md`); prompt is a Claude draft |
 | 4. Agent | Built. `agent/loop.py` (10 tools, 6 steps, traces) and `agent/graph.py` (LangGraph, pause-for-review); 9/10 first run (`evals/agent_check.md`). Chart tier 2 waits on digitising |
 | 5. Review | Escalation flag only; LangGraph pause is the mechanism for a queue |
-| 6. Eval | Not started: needs `evals/golden.jsonl` |
+| 6. Eval | Scorer built (`evals/golden.py`); waiting on Ben's `evals/golden.yaml` |
 | 7. Ship | REST API built (`app/api.py`); Streamlit demo not started |
 
 Open PRs (stacked, merge in order): #20 retrieval → #21 Phase 3 prompt → #22 agent loop → #23 LangGraph → #24 API.
@@ -57,6 +57,7 @@ uv run python -m agent.rag "<question>"        # Phase 3 RAG baseline
 uv run python -m agent.loop "<question>"       # Phase 4 agent (trace in traces/)
 uv run python -m agent.graph "<question>"      # same agent on LangGraph; --mermaid draws it
 uv run uvicorn app.api:app                     # REST API, docs at http://127.0.0.1:8000/docs
+uv run python -m evals.golden                  # score rag/agent/graph on evals/golden.yaml
 ```
 
 ## Pipeline
@@ -86,7 +87,7 @@ Answers cite inline as `[CD 109 cl. 5.3.1]`, `[CD 109 Table 3.5]`, `[CD 109 Glos
 - **After writing code:** run a reviewer subagent, fix its findings with regression tests, then
   open the PR. Every review so far has found real bugs.
 - **Billable `az` commands:** Claude prints them; Ben runs them. Read-only `az` checks are fine.
-- **Ground truth is Ben's:** `evals/golden.jsonl` and `evals/retrieval.yaml` are written by
+- **Ground truth is Ben's:** `evals/golden.yaml` and `evals/retrieval.yaml` are written by
   Ben only (Claude may write the code that loads them).
 - **Licence:** DMRB is Crown copyright under the Open Government Licence v3.0. Short attributed
   extracts are fine as test fixtures; PDFs and parsed text stay out of git.
@@ -137,6 +138,12 @@ is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
 - [ ] Tool descriptions in `agent/tools/registry.py` (the text the model reads to choose a
   tool), and `evals/agent_check.md` (agent on the same 10 questions). Read 2-3 traces in
   `traces/` to see how it searches.
+- [ ] `.claude/settings.json` still denies Claude edits to `evals/golden.jsonl`; the golden set
+  is now `evals/golden.yaml` (YAML, like the retrieval questions). Claude didn't change its own
+  permissions: swap the two deny lines to `golden.yaml` (and add `retrieval.yaml` if you want
+  it locked too, now its tidy-up is done).
+- [ ] Scoring rule to confirm (`evals/scoring.py`): when your golden answer is `departure:
+  false`, an answer that doesn't mention a departure (null) counts as correct. Agree?
 - [ ] `agent/graph.py` (LangGraph version) and `docs/ARCHITECTURE.md`: read both so you can
   walk an interviewer through them. `uv run python -m agent.graph --mermaid` draws the graph.
 
@@ -180,13 +187,15 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 - [ ] Add each standard's document page URL to `data/sources.yaml` (chunk links currently
   point at the site root).
 - [x] Phase 3: `agent/prompts/system.md` and the 10-answer check (Claude drafts, see top).
-- [ ] Later: `evals/golden.jsonl` (30–50 questions with answers) for Phase 6.
+- [ ] `evals/golden.yaml` (30–50 questions with answers) for Phase 6. The template's comments
+  show the layout; the scorer is built, so `uv run python -m evals.golden` gives the
+  RAG vs agent vs graph table as soon as there are questions. You can reuse the 20
+  retrieval questions and the 10 check questions as a start.
 
 ### Claude Code: next
 
-1. Phase 6 code that doesn't need ground truth: `evals/metrics.py` (citation precision,
-   departure and refusal accuracy, cost and latency per question) and a runner that scores
-   RAG, agent and graph over `evals/golden.jsonl` once Ben has written it.
+1. When `evals/golden.yaml` has questions: run `evals.golden`, put the table in the README,
+   then the `azure-ai-evaluation` judges over `evals/results/*.jsonl`.
 2. Streamlit demo over `app/api.py`'s `to_response` (question box, clause badges, review
    badge, trace expander).
 3. After Ben's confirmations: CG 501 flow-path and Fig 9.23N2 tools; chart data format and

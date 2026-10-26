@@ -394,3 +394,21 @@ guessing. Each rule cites its GG 101 source.
   by a fake in tests, so the API is tested without Azure.
 - **Left to the platform:** auth, rate limits and quotas go in Azure API Management in front
   of the service (docs/ARCHITECTURE.md), not in app code.
+
+## 2026-10-25: Golden-set scoring (`evals/golden.py`)
+
+- **YAML, not JSONL.** Ben hand-writes it; the retrieval questions showed YAML is easier to
+  write and the strict loader (now `evals/yaml_io.py`) catches the usual mistakes.
+- **Every metric states its denominator,** shown as k/n in the table. Code review caught
+  three ways the first version flattered a pipeline: a crash or time-out falls back to
+  "not covered", which counted as a correct refusal; "refusal accuracy" pooled in-scope and
+  out-of-scope questions, so never refusing scored ~89%; and precision skipped answers that
+  cited nothing, so refusing more looked more precise. Now: a refusal only counts if the run
+  didn't escalate; correct and false refusals are separate rows; citing nothing on an
+  in-scope question is 0% precision.
+- **A null `is_departure` counts as "no departure".** The Answer schema uses null for "not
+  about a departure", which on a compliant design is a defensible answer. Ben to confirm.
+- **Precision and recall both.** Precision catches citing the wrong clause; recall catches
+  stopping short (e.g. citing a table without the "shall" that makes it binding, the q7 case).
+- **One engine for everything.** The runner uses `agent/engine.py`, the same wiring as the
+  API, so the numbers describe what the service actually does.

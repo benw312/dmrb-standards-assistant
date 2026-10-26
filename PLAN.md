@@ -30,9 +30,9 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [x] [Ben] CD 109 and GG 101 downloaded; licence checked (OGL v3.0)
 - [x] [Ben] Download CD 123 and CG 501
 - [ ] [Ben] Add document page URLs to `data/sources.yaml`
-- [ ] [Ben] Start `evals/golden.jsonl` (keep going on weekdays, 20-minute sessions).
-      Row: `query, ground_truth, expected_clauses, expected_departure, type`
-      (types: lookup, multi_hop, departure, out_of_scope). Target 30–50.
+- [ ] [Ben] Start `evals/golden.yaml` (keep going on weekdays, 20-minute sessions). The file's
+      comments show the layout (types: lookup, multi_hop, departure, calculation,
+      out_of_scope). Target 30–50.
 - [x] [Ben] Write the 20 retrieval questions with known clause IDs (`evals/retrieval.yaml`;
       citation format tidied by CC, R08 replaced: Ben to review)
 
@@ -106,8 +106,8 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
   step limit, out of scope. Note in README that the review queue is future work.
 
 ### Phase 6: Evaluation
-- [ ] [CC] `evals/metrics.py`: recall@5, citation precision, departure accuracy, refusal accuracy,
-      cost/latency per question
+- [x] [CC] `evals/golden.py`: citation precision/recall, requirement, departure and refusal
+      accuracy, review/escalation rate, cost/latency per question, per mode (rag/agent/graph)
 - [ ] [CC] `azure-ai-evaluation` runner (Groundedness, Relevance, Tool Call Accuracy, Task Adherence)
 - [ ] [Ben] Hand-check a judge sample; report agreement
 - [ ] [CC] Experiment table: RAG vs agent, small vs large model (Claude optional)
