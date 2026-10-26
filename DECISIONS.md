@@ -434,8 +434,10 @@ guessing. Each rule cites its GG 101 source.
   component other AI systems can use, not only an app.
 - **Two kinds of tool:** `ask_dmrb` runs the whole agent, with the citation gate, departure
   flag and escalation, and is the one to use for answers. The agent's own tools are exposed
-  too, for clients composing their own workflow; their results aren't checked answers, and
-  the server's instructions say so.
+  with `--with-tools`, for clients composing their own workflow. Their results aren't checked
+  answers, so they're opt-in and each description starts by saying so.
+- **Bounded:** at most 4 calls run at once (an `ask_dmrb` call is several model calls); the
+  agent's step and time limits bound each one.
 - **One engine:** `agent/engine.py` now returns the answerer and the tools built on the same
   clients (`build_live_engine`), so REST, UI and MCP can't drift apart.
 - **Low-level server, not the decorator API:** the tools already have Pydantic schemas in the

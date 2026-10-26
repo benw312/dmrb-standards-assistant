@@ -70,7 +70,8 @@ integration gets:
 | MCP | `app/mcp_server.py` | Other AI agents and assistants (Claude Desktop, Copilot Studio, watsonx Orchestrate) |
 
 The MCP server offers `ask_dmrb`, the governed path (citation gate, departure flag,
-escalation), plus the agent's own tools as building blocks. To try it in Claude Desktop, add
+escalation). `--with-tools` also exposes the agent's own tools as building blocks, each
+labelled as unchecked. To try it in Claude Desktop, add
 to `claude_desktop_config.json`:
 
 ```json

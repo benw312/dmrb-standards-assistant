@@ -1,7 +1,8 @@
 """The assistant as an MCP server, so any MCP client (Claude Desktop, Copilot Studio, watsonx
 Orchestrate, another agent) can use it as a tool.
 
-    uv run python -m app.mcp_server          # stdio transport
+    uv run python -m app.mcp_server                # stdio: ask_dmrb only
+    uv run python -m app.mcp_server --with-tools   # also the agent's own tools
 
 Two kinds of tool:
 
@@ -10,12 +11,15 @@ Two kinds of tool:
 - The agent's own tools (search_standards, get_clause, the CD 109 equations, check_chart,
   check_limit): for a client building its own workflow. These are the same functions the
   agent calls, with the same argument validation, but the citation gate is the caller's job:
-  a raw tool result isn't an answer.
+  a raw tool result isn't an answer. So they're opt-in (`--with-tools`), and each one's
+  description starts by saying it's unchecked.
 
-The tools are synchronous (Azure SDK calls), so each call runs in a worker thread and the
-server's event loop stays free for other requests.
+The tools are synchronous (Azure SDK calls), so each call runs in a worker thread; at most
+MAX_CONCURRENT run at once, so one client can't use up the model quota. The agent's own
+step and time limits bound each call.
 """
 
+import argparse
 import json
 import logging
 import uuid
@@ -44,6 +48,12 @@ ASK_DESCRIPTION = (
     "is true or escalation is non-empty, tell the user an engineer must review the answer."
 )
 
+UNCHECKED = (
+    "Building block, not a checked answer: no citation check or review flag. Use ask_dmrb to "
+    "answer a question. "
+)
+MAX_CONCURRENT = 4  # calls in flight; an ask_dmrb call is several model calls
+
 AskFn = Callable[[str, Mode], AgentResult | RagResult]
 
 
@@ -66,7 +76,9 @@ def list_tools(tools: Sequence[Tool]) -> list[types.Tool]:
     ]
     listed += [
         types.Tool(
-            name=t.name, description=t.description, input_schema=t.args_model.model_json_schema()
+            name=t.name,
+            description=UNCHECKED + t.description,
+            input_schema=t.args_model.model_json_schema(),
         )
         for t in tools
     ]
@@ -88,7 +100,7 @@ def call_ask(ask: AskFn, arguments: Mapping[str, Any]) -> types.CallToolResult:
     response = to_response(result, args.mode, request_id)
     return types.CallToolResult(
         content=[types.TextContent(type="text", text=response.model_dump_json())],
-        structured_content=json.loads(response.model_dump_json()),
+        structured_content=response.model_dump(mode="json"),
     )
 
 
@@ -97,7 +109,8 @@ def call_tool(
 ) -> types.CallToolResult:
     # run_tool turns every bad call into a readable error; only Azure / OpenAI errors raise.
     try:
-        call = run_tool(tools, name, json.dumps(dict(arguments)))
+        raw = json.dumps(dict(arguments))
+        call = run_tool(tools, name, raw)
     except Exception as err:  # noqa: BLE001 - a service failure, reported not raised
         logger.exception("MCP tool %s failed", name)
         return _text(f"{name} failed calling an Azure service ({type(err).__name__})", True)
@@ -105,7 +118,9 @@ def call_tool(
 
 
 def create_server(tools: Sequence[Tool], ask: AskFn) -> Server:
+    """`tools` are the raw tools to expose besides ask_dmrb (empty for the governed path only)."""
     by_name = {t.name: t for t in tools}
+    limiter = anyio.CapacityLimiter(MAX_CONCURRENT)
 
     async def on_list_tools(ctx: Any, params: Any) -> types.ListToolsResult:
         return types.ListToolsResult(tools=list_tools(tools))
@@ -113,8 +128,10 @@ def create_server(tools: Sequence[Tool], ask: AskFn) -> Server:
     async def on_call_tool(ctx: Any, params: types.CallToolRequestParams) -> types.CallToolResult:
         arguments = params.arguments or {}
         if params.name == ASK:
-            return await anyio.to_thread.run_sync(call_ask, ask, arguments)
-        return await anyio.to_thread.run_sync(call_tool, by_name, params.name, arguments)
+            return await anyio.to_thread.run_sync(call_ask, ask, arguments, limiter=limiter)
+        return await anyio.to_thread.run_sync(
+            call_tool, by_name, params.name, arguments, limiter=limiter
+        )
 
     return Server(
         "dmrb-standards-assistant",
@@ -129,17 +146,22 @@ def create_server(tools: Sequence[Tool], ask: AskFn) -> Server:
     )
 
 
-async def _serve() -> None:  # pragma: no cover - live Azure clients and real stdio
+async def _serve(with_tools: bool) -> None:  # pragma: no cover - live Azure, real stdio
     from mcp.server.stdio import stdio_server
 
     from agent.engine import build_live_engine
 
     engine = build_live_engine()
-    server = create_server(engine.tools, engine.answer)
+    server = create_server(engine.tools if with_tools else (), engine.answer)
     async with stdio_server() as (read_stream, write_stream):
         await server.run(read_stream, write_stream, server.create_initialization_options())
 
 
 if __name__ == "__main__":  # pragma: no cover
+    parser = argparse.ArgumentParser(description="DMRB assistant MCP server (stdio)")
+    parser.add_argument(
+        "--with-tools", action="store_true", help="also expose the agent's raw tools"
+    )
+    options = parser.parse_args()
     logging.basicConfig(level=logging.INFO)  # stderr: stdout is the MCP channel
-    anyio.run(_serve)
+    anyio.run(_serve, options.with_tools)
