@@ -1,0 +1,136 @@
+# CD109-Figure-2.1: machine-read by ingest/digitise_bands.py. DRAFT until an engineer
+# checks the crossings against the figure and sets status: checked.
+id: CD109-Figure-2.1
+status: draft
+digitised_by: ingest/digitise_bands.py (machine-read 2026-10-26)
+checked_by: null
+source: CD 109
+page: 10
+clauses:
+- CD 109 cl. 2.1
+- CD 109 cl. 2.4
+licence: Contains public sector information licensed under the OGL v3.0
+reads: 'For each Lc line: the band at Ac 0, then the Ac at which the line crosses
+  down into each lower band (null: not between Ac 0 and 20). The design speed is the
+  band whose crossings bracket the Ac. ''above 120A'': the line is above the top of
+  the chart there.'
+bands_top_to_bottom:
+- 120A
+- 120B
+- 100A
+- 100B
+- 85A
+- 85B
+- 70A
+- 70B
+lc_crossings:
+  0:
+    at_ac_0: above 120A
+    120B: 16.16
+    100A: null
+    100B: null
+    85A: null
+    85B: null
+    70A: null
+    70B: null
+  5:
+    at_ac_0: above 120A
+    120B: 11.5
+    100A: 19.13
+    100B: null
+    85A: null
+    85B: null
+    70A: null
+    70B: null
+  10:
+    at_ac_0: 120A
+    120B: 6.75
+    100A: 14.41
+    100B: null
+    85A: null
+    85B: null
+    70A: null
+    70B: null
+  15:
+    at_ac_0: 120A
+    120B: 2.04
+    100A: 9.69
+    100B: 16.68
+    85A: null
+    85B: null
+    70A: null
+    70B: null
+  20:
+    at_ac_0: 120B
+    120B: null
+    100A: 4.88
+    100B: 11.84
+    85A: 18.15
+    85B: null
+    70A: null
+    70B: null
+  25:
+    at_ac_0: 120B
+    120B: null
+    100A: 0.26
+    100B: 7.17
+    85A: 13.41
+    85B: 18.92
+    70A: null
+    70B: null
+  30:
+    at_ac_0: 100A
+    120B: null
+    100A: null
+    100B: 2.42
+    85A: 8.65
+    85B: 14.14
+    70A: 19.81
+    70B: null
+  35:
+    at_ac_0: 100B
+    120B: null
+    100A: null
+    100B: null
+    85A: 3.91
+    85B: 9.39
+    70A: 15.06
+    70B: null
+worked_example:
+  ac: 12
+  lc: 15
+  expected: 100A
+  read: 100A
+lines:
+- lc: 0
+  slope_px: 0.2787
+  intercept_px: 126.4
+  pixels: 224
+- lc: 5
+  slope_px: 0.2711
+  intercept_px: 154.37
+  pixels: 232
+- lc: 10
+  slope_px: 0.27
+  intercept_px: 179.84
+  pixels: 225
+- lc: 15
+  slope_px: 0.2704
+  intercept_px: 204.7
+  pixels: 308
+- lc: 20
+  slope_px: 0.2715
+  intercept_px: 229.93
+  pixels: 312
+- lc: 25
+  slope_px: 0.2739
+  intercept_px: 254.18
+  pixels: 313
+- lc: 30
+  slope_px: 0.2747
+  intercept_px: 279.5
+  pixels: 303
+- lc: 35
+  slope_px: 0.275
+  intercept_px: 304.92
+  pixels: 302

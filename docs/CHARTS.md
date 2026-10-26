@@ -22,7 +22,7 @@ signs), whose dimensions are already stated in the clause text.
 | 6 | CG 501 flow path length / gradient | Waiting on Ben: OK to cite the derived formulas? |
 | 7 | CD 109 Fig 9.23N2 overtaking sections | Waiting on Ben: boundary sides, and what applies above V²/R = 20 |
 | 8–9 | CG 501 Fig 7.5.4, 7.5.1 | **Built** as `check_chart` (`agent/tools/charts.py`). Data machine-read by `ingest/digitise.py`: draft until Ben checks the overlays |
-| 10 | CD 109 Fig 2.1 | To do: dashed lines on speed bands need their own reading method |
+| 10 | CD 109 Fig 2.1 | **Machine-read** by `ingest/digitise_bands.py` into `data/charts/design_speed/` (draft: Lc line crossings per band; NOTE 2 example reads 100A). Tool waits on Ben's reading rules |
 | flagship | Design speed chain (1 + 3 + 10 + Table 2.3) | After tool 10 |
 | 11–12 | CD 123 Fig 2.3.1; Fig 9.23N2 inset | Waiting on Ben's tier 3 decision |
 | 13 | CG 501 Fig 2.5 flowchart | **Done** as a searchable figure chunk (no tool needed) |
@@ -118,6 +118,14 @@ gridline values, where the markers sit); the code does the rest:
 
 On Fig 7.5.4 and 7.5.1 the gridline fit is within 0.003 of the axis values, and the readings
 agree with a by-eye read to within one pixel (about 0.006).
+
+**CD 109 Fig 2.1** has no markers: its y axis is design speed bands and the Lc values are eight
+straight dashed lines. `ingest/digitise_bands.py` calibrates Ac from the tick marks, removes
+the band edges, finds the slope that stacks the remaining ink into the sharpest peaks (one per
+line), and refits each line. Each line's dashed part (left of Ac 6.6) and dash-dot part agree
+to within 0.1 px. The output is, for each Lc line, the Ac at which it crosses into each
+lower band, which an engineer can check against the figure line by line. The image is
+588 × 536 px, so 1 px is about 0.05 of Ac.
 
 ## Scaling to the whole DMRB
 

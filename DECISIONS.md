@@ -443,3 +443,8 @@ guessing. Each rule cites its GG 101 source.
   the reading tolerance "marginal". Adding a chart is a data change.
 - **Dependency:** `pdfplumber` (MIT; brings `pypdfium2`) as a dev dependency, only for reading
   the images out of the PDFs.
+- **Fig 2.1 has its own reader** (`ingest/digitise_bands.py`): bands, not a value axis, and
+  dashed lines, not markers. Its output is a crossing table (Ac per Lc line per band edge),
+  the form an engineer can check line by line. It's kept out of `check_chart`'s directory
+  (`data/charts/design_speed/`) because it isn't an avoid-the-line chart; the design speed
+  tool that uses it waits on three reading rules from Ben (HANDOVER).
