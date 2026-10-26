@@ -1,7 +1,7 @@
 # Handover: where the project stands
 
 Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DECISIONS.md`
-(why things are the way they are). Last updated 2026-10-22, end of Phase 1.
+(why things are the way they are). Last updated 2026-10-25, Phases 2–4 built.
 
 ## Status
 
@@ -10,9 +10,13 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 | 0. Setup | Done. Azure resources live, smoke test 4/4 (`uv run python -m core.smoke_test`) |
 | 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 656 chunks; Ben's 20-chunk review fixed (PR #15) |
 | 2. Index | Done. 657 documents; semantic recall@5 100%, MRR 0.83 on 20 questions (README) |
-| 3–7 | Not started. `agent/answer.py`, `agent/citations.py`, `agent/tools/check_limit.py` already built and tested for Phases 3–4. Phase 4 chart tools planned in `docs/CHARTS.md` |
+| 3. RAG | Done. `agent/rag.py`, 9/10 on the hand check (`evals/rag_check.md`); prompt is a Claude draft |
+| 4. Agent | Built. `agent/loop.py` (10 tools, 6 steps, traces) and `agent/graph.py` (LangGraph, pause-for-review); 9/10 first run (`evals/agent_check.md`). Chart tier 2 waits on digitising |
+| 5. Review | Escalation flag only; LangGraph pause is the mechanism for a queue |
+| 6. Eval | Not started: needs `evals/golden.jsonl` |
+| 7. Ship | REST API built (`app/api.py`); Streamlit demo not started |
 
-Open PRs: #16 (chart catalogue). Last updated 2026-10-22.
+Open PRs (stacked, merge in order): #20 retrieval → #21 Phase 3 prompt → #22 agent loop → #23 LangGraph → #24 API.
 
 ## Azure as built
 
@@ -49,6 +53,10 @@ uv run python -m ingest.chunk --show CD109-2.2 # print one chunk with heading pa
 uv run python -m index.rebuild                 # embed chunks, recreate the index (~1 min, <1p)
 uv run python -m evals.recall                  # recall@5 per mode on evals/retrieval.yaml
 uv run python -m evals.recall --modes semantic --k 8
+uv run python -m agent.rag "<question>"        # Phase 3 RAG baseline
+uv run python -m agent.loop "<question>"       # Phase 4 agent (trace in traces/)
+uv run python -m agent.graph "<question>"      # same agent on LangGraph; --mermaid draws it
+uv run uvicorn app.api:app                     # REST API, docs at http://127.0.0.1:8000/docs
 ```
 
 ## Pipeline
@@ -176,12 +184,11 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 
 ### Claude Code: next
 
-1. When the retrieval questions land: run `evals.recall`, fix chunking or the embedding text
-   if semantic recall@5 < 80%, put the number in the README.
-2. Phase 3: `agent/rag.py` is built; once Ben's prompt exists, run the 10-question check
-   and the Foundry built-in search-tool variant (needs the Search connection in Foundry).
-3. Phase 4: CD 109 equation tools and `get_clause`/`get_table` are built. Next: the CG 501
-   flow-path and Fig 9.23N2 tools after Ben's confirmations, then the chart data format and
+1. Phase 6 code that doesn't need ground truth: `evals/metrics.py` (citation precision,
+   departure and refusal accuracy, cost and latency per question) and a runner that scores
+   RAG, agent and graph over `evals/golden.jsonl` once Ben has written it.
+2. Streamlit demo over `app/api.py`'s `to_response` (question box, clause badges, review
+   badge, trace expander).
+3. After Ben's confirmations: CG 501 flow-path and Fig 9.23N2 tools; chart data format and
    tier 2 once charts are digitised.
-4. Phase 4 agent loop: `search_standards` tool over `index/search.py`, then the Responses-API
-   function-calling loop (max 6 steps, time budget, JSONL traces) using the tools built so far.
+4. Foundry built-in search-tool variant once the Search connection exists in Foundry.

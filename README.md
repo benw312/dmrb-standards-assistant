@@ -68,7 +68,7 @@ prints the graph.
 | 4. Agent | Tool-calling loop with traces | Built: 10 tools, 6-step loop, JSONL traces; 9/10 first run ([evals/agent_check.md](evals/agent_check.md)) |
 | 5. Human review | Confidence gate and escalation | Not started |
 | 6. Evaluation | Golden set, metrics, model comparison | Not started |
-| 7. Ship | Streamlit demo | Not started |
+| 7. Ship | REST API, Streamlit demo | REST API built (`app/api.py`: `POST /ask`); demo not started |
 
 ## Retrieval results
 
@@ -109,6 +109,12 @@ uv run python -m evals.recall     # recall@5 per search mode on evals/retrieval.
 uv run python -m agent.rag "What is the maximum gradient on a motorway?"    # RAG baseline
 uv run python -m agent.loop "Superelevation for R = 510 m at 100 kph, rural?" # agent
 uv run python -m agent.graph "Superelevation for R = 510 m at 100 kph, rural?" # LangGraph agent
+uv run uvicorn app.api:app        # REST API; interactive docs at http://127.0.0.1:8000/docs
+```
+
+```bash
+curl -X POST localhost:8000/ask -H 'content-type: application/json' \
+  -d '{"question": "Can I use a 5% gradient on a motorway?", "mode": "agent"}'
 ```
 
 Azure resources are created with [`scripts/azure_setup.sh`](scripts/azure_setup.sh) and removed
@@ -121,7 +127,7 @@ ingest/    PDF parsing and clause chunking
 index/     Azure AI Search schema and rebuild
 agent/     RAG pipeline, agent loop and tools
 evals/     Metrics and evaluation runners
-app/       Demo UI
+app/       REST API (FastAPI); demo UI to come
 scripts/   Azure setup and teardown
 data/      sources.yaml (PDFs and parsed text are not committed)
 ```

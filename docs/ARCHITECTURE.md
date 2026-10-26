@@ -85,8 +85,8 @@ flowchart TB
 
 The prototype runs from a laptop on personal Azure resources. For a client deployment:
 
-- **Hosting:** the agent behind a FastAPI service on Azure Container Apps, using a managed
-  identity, with Azure API Management in front for auth, quotas and versioned APIs.
+- **Hosting:** the FastAPI service (`app/api.py`, built) on Azure Container Apps, using a
+  managed identity, with Azure API Management in front for auth, quotas and versioned APIs.
 - **Network:** private endpoints for Search, Foundry and storage; no public access.
 - **Observability:** the JSONL trace events sent to Application Insights through
   OpenTelemetry, with dashboards for escalation rate, tool errors, latency and tokens per question.
