@@ -60,10 +60,15 @@ def test_reads_a_band_from_ac_and_lc():
 
 def test_crossings_are_where_a_line_meets_each_band_edge():
     fig = read_figure(_figure())
-    row = crossings(fig)[15]
+    table = crossings(fig)
+    row = table[15]
     # Lc 15 meets the 120B/100A edge (y 286) at x = (286 - 204.9) / 0.27 = 300.4 -> Ac 9.76
-    assert row["100A"] == pytest.approx(9.76, abs=0.15)
-    assert row["at_ac_0"] == "120A"
+    assert row["into 100A"] == pytest.approx(9.76, abs=0.15)
+    assert row["at_ac_0"] == "120A" and row["into 120A"] == "before 0"
+    assert row["out of 70B"] == "after 20"
+    # Lc 0 starts above the chart and enters it at y 200: x = (200 - 129) / 0.27 = 263 -> 7.8
+    assert table[0]["at_ac_0"] == "above 120A"
+    assert table[0]["into 120A"] == pytest.approx(7.8, abs=0.15)
 
 
 def test_a_missing_line_is_refused():
@@ -83,3 +88,37 @@ def test_output_is_a_draft_with_the_worked_example():
     out = to_yaml(read_figure(_figure()))
     assert out["status"] == "draft" and out["checked_by"] is None
     assert out["worked_example"] == {"ac": 12, "lc": 15, "expected": "100A", "read": "100A"}
+
+
+def _with(draw_extra) -> Image.Image:
+    im = _figure()
+    draw_extra(ImageDraw.Draw(im))
+    return im
+
+
+def test_an_extra_vertical_line_is_refused():
+    im = _with(lambda d: d.line([(400, 190), (400, EDGES[-1])], fill=0, width=1))
+    with pytest.raises(DigitiseError, match="frame and the Ac 6.6 divider"):
+        read_figure(im)
+
+
+def test_lines_that_arent_evenly_spaced_are_refused():
+    im = Image.new("L", (590, 540), 255)
+    base = _figure(lines=7)
+    im.paste(base)
+    d = ImageDraw.Draw(im)
+    # An eighth "line" in the wrong place: too close to the seventh.
+    b = INTERCEPTS[6] + 8
+    d.line([(250, SLOPE * 250 + b), (495, SLOPE * 495 + b)], fill=0, width=2)
+    with pytest.raises(DigitiseError, match="evenly spaced|too little ink|expected 8"):
+        read_figure(im)
+
+
+def test_just_above_a_band_edge_reads_the_band_above():
+    fig = read_figure(_figure())
+    assert design_speed(fig, 20, 35) == "70A"  # y = 0.27 * 500 + 306 = 441; 70A ends at 444
+
+
+def test_an_axis_title_beside_the_plot_is_ignored():
+    im = _with(lambda d: d.line([(570, 200), (570, 460)], fill=0, width=2))
+    assert len(read_figure(im).lines) == 8

@@ -192,7 +192,8 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
      simply not covered? Refuse those inputs?
   2. Where a line is above the top of the chart (Lc 0 below Ac 8.3, Lc 5 below 6.6): 120A?
   3. Lc between the drawn lines (e.g. 12 from Table 2.3): interpolate, as the tool does now?
-  Also noticed: the vertical divider is drawn at Ac 6.49, not 6.6.
+  Also noticed: the vertical divider is drawn at Ac 6.49, not 6.6, and the Lc 0 line fits
+  about 4% steeper than the others (check it on the overlay).
 - [ ] Superelevation at exactly Table 2.10's "minimum R with adverse camber": the tool says
   camber (cl. 4.1 says "less than", 4.1.1 "greater than", so equality is open). Agree?
 - [ ] Harmonic mean visibility warns below 20 readings (2 km at 100 m spacing, cl. 2.6/2.6.1).

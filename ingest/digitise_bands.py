@@ -47,7 +47,13 @@ TICK_DEPTH_PX = (2, 8)  # tick marks hang this far below the bottom band edge
 MIN_TICK_PX = 3  # ink rows in that strip for a column to count as a tick
 SLOPES = np.arange(0.15, 0.45, 0.0005)  # px down per px across; the lines fall left to right
 MIN_PEAK_PIXELS = 40  # an intercept peak with fewer pixels than this isn't a line
+MIN_LINE_PIXELS = 150  # a real Lc line has 250-300 ink pixels after refitting; text far fewer
 LINE_HALF_WIDTH_PX = 2.5
+# Gates: the Lc lines are drawn evenly spaced and parallel, so a reading that isn't is wrong
+# (a text label read as a line, a line split in two), and is refused rather than written.
+MAX_SPACING_SPREAD = 0.15  # each gap between lines within this share of the median gap
+MAX_SLOPE_SPREAD = 0.02  # px/px between the steepest and shallowest refitted line
+FRAME_TO_TICK_PX = 3  # the outer vertical lines must sit on the Ac 0 and Ac 20 ticks
 
 
 @dataclass(frozen=True)
@@ -134,8 +140,22 @@ def read_figure(image: Image.Image) -> Figure:
         raise DigitiseError("Ac ticks are unevenly spaced")
     ac_px = (ticks[0], ticks[-1])
 
-    ys, xs = _line_pixels(mask, edges, [columns[0], *columns[1:-1], columns[-1]])
-    best = max(SLOPES, key=lambda s: (np.histogram(ys - s * xs, bins=200)[0] ** 2).sum())
+    # Left frame, the Ac 6.6 divider, right frame: anything else means the plot wasn't found.
+    # Only between the end ticks: the rotated axis title beside the plot is column-like too.
+    columns = [
+        c for c in columns if ticks[0] - FRAME_TO_TICK_PX <= c <= ticks[-1] + FRAME_TO_TICK_PX
+    ]
+    if len(columns) != 3 or any(
+        abs(c - t) > FRAME_TO_TICK_PX for c, t in ((columns[0], ticks[0]), (columns[-1], ticks[-1]))
+    ):
+        raise DigitiseError(
+            f"expected the frame and the Ac 6.6 divider, found vertical lines at {columns}"
+        )
+
+    ys, xs = _line_pixels(mask, edges, columns)
+    best = max(SLOPES, key=lambda s: _sharpness(ys - s * xs))
+    if best in (SLOPES[0], SLOPES[-1]):
+        raise DigitiseError(f"line slope search hit its limit ({best:.3f})")
     peaks = _peaks(ys - best * xs)
     if len(peaks) != len(LC_VALUES):
         raise DigitiseError(f"expected {len(LC_VALUES)} Lc lines, found {len(peaks)}")
@@ -144,18 +164,46 @@ def read_figure(image: Image.Image) -> Figure:
         on = np.abs(ys - best * xs - peak) < LINE_HALF_WIDTH_PX
         slope, intercept = np.polyfit(xs[on], ys[on], 1)
         lines.append(Line(lc, float(slope), float(intercept), int(on.sum())))
+    _check_lines(lines, at_x=(ac_px[0] + ac_px[1]) / 2)
     return Figure(edges, ac_px, tuple(lines))
 
 
-def crossings(figure: Figure) -> dict[int, dict[str, float | str | None]]:
-    """For each Lc line: the band it starts in at Ac 0, then the Ac where it crosses down into
-    each lower band (None: not between Ac 0 and 20)."""
+def _sharpness(intercepts: np.ndarray) -> float:
+    """How tightly ink stacks into lines at this slope. Fixed 1 px bins, so scores at
+    different slopes are comparable."""
+    bins = np.arange(np.floor(intercepts.min()), intercepts.max() + 2, 1.0)
+    return float((np.histogram(intercepts, bins=bins)[0].astype(np.int64) ** 2).sum())
+
+
+def _check_lines(lines: Sequence[Line], at_x: float) -> None:
+    """Spacing is measured mid-plot: intercepts at x = 0, off the plot, would magnify small
+    slope differences."""
+    thin = [line.lc for line in lines if line.pixels < MIN_LINE_PIXELS]
+    if thin:
+        raise DigitiseError(f"Lc line(s) {thin} have too little ink to be lines")
+    slopes = [line.slope for line in lines]
+    if max(slopes) - min(slopes) > MAX_SLOPE_SPREAD:
+        raise DigitiseError(
+            f"Lc lines aren't parallel (slopes {min(slopes):.3f}-{max(slopes):.3f})"
+        )
+    gaps = np.diff([line.y(at_x) for line in lines])
+    median = float(np.median(gaps))
+    if median <= 0 or any(abs(g - median) > MAX_SPACING_SPREAD * median for g in gaps):
+        raise DigitiseError(f"Lc lines aren't evenly spaced (gaps {np.round(gaps, 1).tolist()})")
+
+
+def crossings(figure: Figure) -> dict[int, dict[str, float | str]]:
+    """For each Lc line: the band at Ac 0, then the Ac where it crosses each band edge going
+    down: into 120A (entering the chart at the top), into 120B, ..., out of 70B (leaving at
+    the bottom). "before 0": it was already past that edge at Ac 0; "after 20": it doesn't
+    reach it on the chart."""
+    names = ("into 120A", *(f"into {b}" for b in BANDS[1:]), "out of 70B")
     table = {}
     for line in figure.lines:
-        row: dict[str, float | str | None] = {"at_ac_0": design_speed(figure, 0, line.lc)}
-        for band, edge in zip(BANDS[1:], figure.edges[1:-1], strict=True):
+        row: dict[str, float | str] = {"at_ac_0": design_speed(figure, 0, line.lc)}
+        for name, edge in zip(names, figure.edges, strict=True):
             ac = figure.ac((edge - line.intercept) / line.slope)
-            row[band] = round(ac, 2) if 0 <= ac <= AC_TICKS[-1] else None
+            row[name] = "before 0" if ac < 0 else "after 20" if ac > AC_TICKS[-1] else round(ac, 2)
         table[line.lc] = row
     return table
 
@@ -206,9 +254,9 @@ def to_yaml(figure: Figure) -> dict:
         "clauses": ["CD 109 cl. 2.1", "CD 109 cl. 2.4"],
         "licence": "Contains public sector information licensed under the OGL v3.0",
         "reads": "For each Lc line: the band at Ac 0, then the Ac at which the line crosses "
-        "down into each lower band (null: not between Ac 0 and 20). The design speed is the "
-        "band whose crossings bracket the Ac. 'above 120A': the line is above the top of the "
-        "chart there.",
+        "each band edge going down. 'before 0': already past it at Ac 0; 'after 20': not "
+        "reached on the chart. The design speed is the band whose crossings bracket the Ac. "
+        "'above 120A': the line is above the top of the chart there.",
         "bands_top_to_bottom": list(BANDS),
         "lc_crossings": crossings(figure),
         "worked_example": {
