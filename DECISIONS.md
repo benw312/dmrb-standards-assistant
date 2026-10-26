@@ -307,3 +307,16 @@ guessing. Each rule cites its GG 101 source.
     `superelevation` tool is the real fix.
   - "Not covered" answers liked to cite the clauses they ruled out; the contract now says a
     not_covered answer names none.
+
+## 2026-10-25: Retrieval measured; embedding text kept
+
+- **Result:** on Ben's 20 questions, semantic recall@5 is 100% (MRR 0.83), hybrid 90%, vector
+  90%, keyword 80%. Above the 80% bar, so `heading_path + text` stays as the embedding text and
+  the document-code prefix idea is dropped for now.
+- **What the modes show:** keyword misses paraphrases (R12, R14, R15); R07 (drainage on an urban
+  embankment, answered by CG 501 Table 3.5.1) is found only by the semantic re-ranker. That
+  supports semantic as the production mode.
+- **Ground-truth edits by Claude, at Ben's request** so Phase 3 wasn't blocked: citation
+  format only, plus one replaced duplicate (R08). Flagged in the file and in HANDOVER for Ben.
+- **Caveat:** 20 questions is small, and they were written with the standards open. The
+  golden set (Phase 6) adds questions written without the clause list open.

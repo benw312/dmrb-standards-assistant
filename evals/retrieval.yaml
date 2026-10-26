@@ -1,4 +1,7 @@
 # Retrieval questions: ground truth for recall@5, written by Ben.
+# CLAUDE EDIT (2026-10-25, at Ben's request): citations written in full, figures and the
+# equation dropped (not indexed), Table 5.1 added to R02, R08 replaced. Ben to review:
+# see docs/HANDOVER.md "Ben: open checks".
 # Run: uv run python -m evals.recall
 #
 # To add a question, copy a block (from "- id:" to the blank line after it) and edit it.
@@ -15,14 +18,102 @@
 # To use a block: delete the leading "# " on each line, then replace the EXAMPLE id,
 # query and clauses (the loader rejects ids starting EXAMPLE).
 #
-# - id: EXAMPLE-1
-#   query: "EXAMPLE: What is the maximum superelevation on an all-purpose road?"
-#   expected: [CD 109 cl. 4.5]
-#   notes: "wording matches the standard"
-#
-# - id: EXAMPLE-2
-#   query: "EXAMPLE: How much banking should a bend have?"
-#   expected:
-#     - CD 109 cl. 4.5
-#     - CD 109 Table 4.2
-#   notes: "lay wording; two clauses count"
+ - id: R01
+   query: "Would a bollard with a width of 300mm be allowed to be installed within the stopping sight visibilty envelope?"
+   expected: [CD 109 cl. 3.4]
+   notes: "wording matches the standard"
+
+ - id: R02
+   query: "What is the desirable maximum longitudinal gradient for an all purpose dual carriageway?"
+   expected: [CD 109 cl. 5.1, CD 109 Table 5.1]
+   notes: "wording matches the standard"
+
+ - id: R03
+   query: "Should a visibility splay be provided to the right on a minor road at a priority junction on a two way major road?"
+   expected: [CD 123 cl. 3.6]
+   notes: "wording matches the standard"
+
+ - id: R04
+   query: "If we provide an entrance gate off a direct access - what is the set back required from the main running lane?"
+   expected: [CD 123 cl. 4.3]
+   notes: "A good test to check reasoning as the wording isn't exactly the same"
+
+ - id: R05
+   query: "What are the requirements for designing traffic islands on a minor road?"
+   expected: [CD 123 cl. 5.7, CD 123 cl. 5.8, CD 123 cl. 5.9, CD 123 cl. 5.13, CD 123 cl. 5.14, CD 123 cl. 5.15, CD 123 cl. 5.16]
+   notes: "A good test as it is a woolly question with multiple clauses, and the answer is not in one place"
+
+ - id: R06
+   query: "Is it acceptable to include a merge taper on a wide single carriageway?"
+   expected: [CD 123 cl. 5.23]
+   notes: "wording matches the standard"
+
+ - id: R07
+   query: "What would be a suitable drainage system for a urban road which is on an embankment?"
+   expected: [CG 501 cl. 5.3, CG 501 Table 3.5.1]
+   notes: "difficult one, as clause 5.3 could send you to another document, however Table 3.5.1 does recommend a drainage system for the situation described above"
+
+ - id: R08
+   query: "What climate change uplift should I apply to rainfall intensity if the national annex doesn't give one?"
+   expected: [CG 501 cl. 4.2, CG 501 cl. 4.3]
+   notes: "CLAUDE DRAFT (replaced a duplicate of R06): paraphrased; 4.2 gives the 20% design uplift, 4.3 the 40% sensitivity test"
+
+ - id: R09
+   query: "What should the design life be for drainage assets?"
+   expected: [CG 501 cl. 4.6]
+   notes: "wording matches the standard"
+
+ - id: R10
+   query: "What should the width of through lanes on a WS2+1 road at a ghost island junction?"
+   expected: [CD 123 cl. 6.7]
+   notes: "wording matches the standard"
+
+ - id: R11
+   query: "Over what length should harmonic mean visibility be measured?"
+   expected: [CD 109 cl. 2.6]
+   notes: "wording matches the standard"
+
+ - id: R12
+   query: "How should superelevation be considered when designing a corridor?"
+   expected: [CD 109 cl. 4.8, CD 109 cl. 4.9]
+   notes: "another good test as it's an open question with quite a lot of information"
+
+ - id: R13
+   query: "What is the equation for calculating the basic transition length?"
+   expected: [CD 109 cl. 4.12, CD 109 cl. 4.13, CD 109 cl. 4.14, CD 109 cl. 4.15]
+   notes: "good test for the equations and explanation"
+
+ - id: R14
+   query: "What should the lane width be for a climbing lane on a dual carriageway?"
+   expected: [CD 109 cl. 8.2]
+   notes: "wording matches the standard"
+
+ - id: R15
+   query: "What are the considerations for completing the end of a climbing lane?"
+   expected: [CD 109 cl. 8.7, CD 109 cl. 8.8]
+   notes: "poorly worded open queston, but should be answerable"
+
+ - id: R16
+   query: "Please explain how to calculate a crest curve"
+   expected: [CD 109 cl. 5.4, CD 109 Table 2.10]
+   notes: "wording matches the standard"
+
+ - id: R17
+   query: "What are the object heights needed for calculating stopping sight distance?"
+   expected: [CD 109 cl. 3.1]
+   notes: "wording matches the standard"
+
+ - id: R18
+   query: "What is the maximum superelevation for a road in a city?"
+   expected: [CD 109 cl. 4.4]
+   notes: "a test where I've used city instead of urban"
+
+ - id: R19
+   query: "If a route has an AADT of 30000, is this suitable for a WS2+1 road?"
+   expected: [CD 109 cl. 6.1.1]
+   notes: "wording matches the standard"
+
+ - id: R20
+   query: "What are the considerations for WS2+1 changeovers?"
+   expected: [CD 109 cl. 6.8, CD 109 cl. 6.9, CD 109 cl. 6.10]
+   notes: "wording matches the standard"

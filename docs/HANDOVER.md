@@ -9,7 +9,7 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 |---|---|
 | 0. Setup | Done. Azure resources live, smoke test 4/4 (`uv run python -m core.smoke_test`) |
 | 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 656 chunks; Ben's 20-chunk review fixed (PR #15) |
-| 2. Index | Index built (656 documents). `evals/recall.py` ready; waiting on Ben's 20 retrieval questions |
+| 2. Index | Done. 657 documents; semantic recall@5 100%, MRR 0.83 on 20 questions (README) |
 | 3–7 | Not started. `agent/answer.py`, `agent/citations.py`, `agent/tools/check_limit.py` already built and tested for Phases 3–4. Phase 4 chart tools planned in `docs/CHARTS.md` |
 
 Open PRs: #16 (chart catalogue). Last updated 2026-10-22.
@@ -115,10 +115,17 @@ Answers cite inline as `[CD 109 cl. 5.3.1]`, `[CD 109 Table 3.5]`, `[CD 109 Glos
 
 ### Ben: open checks
 
+**Claude drafts standing in for Ben's inputs** (added 2026-10-25 so work wasn't blocked; each
+is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
+- [ ] `evals/retrieval.yaml`: citations written in full (`CD 123 cl. 5.8`, not `5.8`); figures
+  3.2b, 8.7N, 6.8 and Equation 4.13 dropped (drawings aren't indexed; the clause that cites
+  them stands in); `CD 109 Table 5.1` added to R02 (it holds the gradient values); R08 was a
+  duplicate of R06 and is now a CG 501 climate-change uplift question. Check R08's clauses.
+
 Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as you go.
 
 **Blocking Phase 2 sign-off**
-- [ ] Write 20 retrieval questions in `evals/retrieval.yaml`. Copy a block and edit it; the
+- [x] Write 20 retrieval questions in `evals/retrieval.yaml`. Copy a block and edit it; the
   file's comments show the layout. `expected` = what you'd cite in your own answer
   (`CD 109 cl. 4.5`, `CD 109 Table 3.5`, `CD 123 cl. E/1.1`); any one counts as a hit. If the
   answer needs a clause *and* the table it points to, list both. Note multi-hop questions in
