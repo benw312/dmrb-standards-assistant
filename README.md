@@ -58,6 +58,25 @@ The loop is the clearest way to see what an agent is; the graph is what you'd ex
 (parallel tool branches, persistence, human-in-the-loop). `python -m agent.graph --mermaid`
 prints the graph.
 
+## Three ways in: REST, UI, MCP
+
+The same engine (`agent/engine.py`) is served three ways, so what the demo shows is what an
+integration gets:
+
+| Interface | Module | For |
+|---|---|---|
+| REST | `app/api.py` (FastAPI, `POST /ask`) | Line-of-business systems, other services |
+| UI | `app/demo.py` (Streamlit) | Engineers, and demos |
+| MCP | `app/mcp_server.py` | Other AI agents and assistants (Claude Desktop, Copilot Studio, watsonx Orchestrate) |
+
+The MCP server offers `ask_dmrb`, the governed path (citation gate, departure flag,
+escalation), plus the agent's own tools as building blocks. To try it in Claude Desktop, add
+to `claude_desktop_config.json`:
+
+```json
+{"mcpServers": {"dmrb": {"command": "uv", "args": ["--directory", "/path/to/repo", "run", "python", "-m", "app.mcp_server"]}}}
+```
+
 ## Progress
 
 | Phase | Scope | Status |
@@ -112,6 +131,7 @@ uv run python -m agent.loop "Superelevation for R = 510 m at 100 kph, rural?" # 
 uv run python -m agent.graph "Superelevation for R = 510 m at 100 kph, rural?" # LangGraph agent
 uv run uvicorn app.api:app        # REST API; interactive docs at http://127.0.0.1:8000/docs
 uv run streamlit run app/demo.py  # demo UI
+uv run python -m app.mcp_server   # MCP server (stdio), for other agents
 ```
 
 ```bash

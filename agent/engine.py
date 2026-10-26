@@ -5,17 +5,31 @@ exercise exactly the same wiring.
 """
 
 from collections.abc import Callable
-from typing import Literal
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Literal
 
 from agent.loop import AgentResult
 from agent.rag import RagResult
+
+if TYPE_CHECKING:
+    from agent.tools.registry import Tool
 
 Mode = Literal["agent", "graph", "rag"]
 Answerer = Callable[[str, Mode], AgentResult | RagResult]
 
 
+@dataclass(frozen=True)
+class LiveEngine:
+    answer: Answerer
+    tools: "tuple[Tool, ...]"  # the agent's own tools, bound to the same clients
+
+
 def build_live_answerer() -> Answerer:  # pragma: no cover - wires live Azure clients
-    """Build the Azure clients and return a function answering in any mode.
+    return build_live_engine().answer
+
+
+def build_live_engine() -> LiveEngine:  # pragma: no cover - wires live Azure clients
+    """Build the Azure clients once: a function answering in any mode, and the tools.
 
     The tools are closures over these clients and hold no per-request state, so one set is
     shared by all worker threads; the OpenAI, httpx and Search clients are thread-safe.
@@ -55,4 +69,4 @@ def build_live_answerer() -> Answerer:  # pragma: no cover - wires live Azure cl
         # Traces go to local disk (traces/); in production they'd go to App Insights.
         return runner(question, tools, responses, model, system_prompt, trace=JsonlTrace())
 
-    return answer
+    return LiveEngine(answer, tools)
