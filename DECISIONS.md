@@ -412,3 +412,17 @@ guessing. Each rule cites its GG 101 source.
   stopping short (e.g. citing a table without the "shall" that makes it binding, the q7 case).
 - **One engine for everything.** The runner uses `agent/engine.py`, the same wiring as the
   API, so the numbers describe what the service actually does.
+
+## 2026-10-25: Streamlit demo (`app/demo.py`)
+
+- **Same engine and response as the API** (`agent/engine.py`, `to_response`), so the demo
+  can't show something the service wouldn't return.
+- **The banner never claims more than the code checked.** "All cited clauses were found in
+  the text retrieved", not "verified": the gate checks provenance, not correctness. A clean
+  refusal says nothing applicable was found, not that no requirement exists.
+- **An answer that failed a check hides its flags.** Code review pointed out that an
+  escalated answer still showed "Departure needed? No", which in a safety tool is worse
+  than showing nothing. Its text is in a collapsed "unverified" box.
+- **Model text is sanitised before rendering:** no markdown images (the browser would fetch
+  the URL) and `$` shown literally, not as LaTeX.
+- **Tested headless** with Streamlit's AppTest and a fake engine, so the page logic runs in CI.

@@ -115,7 +115,8 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 
 ### Phase 7 (minimal): Ship
 - [x] [CC] FastAPI service: `POST /ask` (agent | graph | rag), `GET /health`, OpenAPI docs (`app/api.py`)
-- [ ] [CC] Streamlit app: question box, clause badges → PDF page, review badge, trace expander
+- [x] [CC] Streamlit app: question box, clause badges, review badge, trace expander (`app/demo.py`;
+      badges don't link to PDF pages until `sources.yaml` has page URLs)
 - [ ] [CC] README draft + architecture diagram
 - [ ] [Ben] README design decisions + limitations in your own words; record demo GIF
 - [ ] [Ben] CV line with the real number; LinkedIn post

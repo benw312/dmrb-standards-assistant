@@ -69,7 +69,7 @@ prints the graph.
 | 4. Agent | Tool-calling loop with traces | Built: 10 tools, 6-step loop, JSONL traces; 9/10 first run ([evals/agent_check.md](evals/agent_check.md)) |
 | 5. Human review | Confidence gate and escalation | Not started |
 | 6. Evaluation | Golden set, metrics, model comparison | Not started |
-| 7. Ship | REST API, Streamlit demo | REST API built (`app/api.py`: `POST /ask`); demo not started |
+| 7. Ship | REST API, Streamlit demo | Built: `app/api.py` (`POST /ask`) and `app/demo.py`; demo GIF to record |
 
 ## Retrieval results
 
@@ -111,6 +111,7 @@ uv run python -m agent.rag "What is the maximum gradient on a motorway?"    # RA
 uv run python -m agent.loop "Superelevation for R = 510 m at 100 kph, rural?" # agent
 uv run python -m agent.graph "Superelevation for R = 510 m at 100 kph, rural?" # LangGraph agent
 uv run uvicorn app.api:app        # REST API; interactive docs at http://127.0.0.1:8000/docs
+uv run streamlit run app/demo.py  # demo UI
 ```
 
 ```bash
@@ -128,7 +129,7 @@ ingest/    PDF parsing and clause chunking
 index/     Azure AI Search schema and rebuild
 agent/     RAG pipeline, agent loop and tools
 evals/     Metrics and evaluation runners
-app/       REST API (FastAPI); demo UI to come
+app/       REST API (FastAPI) and Streamlit demo
 scripts/   Azure setup and teardown
 data/      sources.yaml (PDFs and parsed text are not committed)
 ```
