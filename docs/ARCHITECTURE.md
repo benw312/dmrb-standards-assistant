@@ -40,6 +40,7 @@ flowchart TB
 | Compute | `agent/tools/equations.py`, `check_limit.py` | CD 109 equations and limit checks in exact decimals; the model only supplies inputs |
 | Verify | `agent/citations.py` | Parses every citation in the answer; each must be something a tool returned this run |
 | Observe | `agent/trace.py` | One JSONL line per model call, tool call and check |
+| Serve | `app/api.py`, `app/demo.py`, `app/mcp_server.py` | One engine behind REST, a Streamlit UI and an MCP server; MCP's `ask_dmrb` keeps the citation gate, raw tools are building blocks |
 | Evaluate | `evals/` | recall@k / MRR on hand-written questions; hand-judged answer checks; golden set next |
 
 ## A question, end to end (agent)
