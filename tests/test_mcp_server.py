@@ -3,12 +3,13 @@
 import json
 
 import anyio
+import pytest
 from azure.core.exceptions import ServiceRequestError
 from mcp import Client
 from pydantic import BaseModel, ConfigDict
 
 from agent.tools.registry import Tool, build_tools
-from app.mcp_server import ASK, create_server
+from app.mcp_server import ASK, UNCHECKED, create_server
 from tests.test_api import FakeAnswerer, _agent_result
 from tests.test_search_tool import FakeSearch, _doc, _embed
 
@@ -47,9 +48,34 @@ def test_ask_returns_the_checked_answer_with_review_flags():
     assert {"answer", "citations", "needs_human_review", "escalation", "request_id"} <= set(body)
 
 
-def test_ask_validates_its_arguments():
-    result = _session(lambda c: c.call_tool(ASK, {"question": "x", "mode": "agent"}))
-    assert result.is_error and "question" in result.content[0].text
+@pytest.mark.parametrize(
+    ("args", "field"),
+    [
+        ({"question": "x"}, "question"),
+        ({"question": "q" * 1001}, "question"),
+        ({"question": "Max gradient?", "mode": "fast"}, "mode"),
+        ({"question": "Max gradient?", "extra": 1}, "extra"),
+    ],
+)
+def test_ask_validates_its_arguments(args, field):
+    result = _session(lambda c: c.call_tool(ASK, args))
+    assert result.is_error and field in result.content[0].text
+
+
+def test_ask_passes_the_mode_through():
+    ask = FakeAnswerer(_agent_result())
+    _session(lambda c: c.call_tool(ASK, {"question": "Max gradient?", "mode": "graph"}), ask=ask)
+    assert ask.calls == [("Max gradient?", "graph")]
+
+
+def test_every_raw_tool_says_it_is_not_a_checked_answer():
+    for tool in _session(lambda c: c.list_tools()).tools[1:]:
+        assert tool.description.startswith(UNCHECKED), tool.name
+
+
+def test_without_raw_tools_only_the_governed_path_is_offered():
+    result = _session(lambda c: c.list_tools(), tools=())
+    assert [t.name for t in result.tools] == [ASK]
 
 
 def test_ask_failure_is_an_error_result_with_a_request_id_not_a_crash():
