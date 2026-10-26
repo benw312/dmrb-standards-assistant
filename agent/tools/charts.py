@@ -67,6 +67,8 @@ class Chart(BaseModel):
 
     id: str
     status: Literal["draft", "checked"]
+    digitised_by: str
+    checked_by: str | None = None  # the engineer who compared the data with the figure
     source: str
     page: int
     clauses: tuple[str, ...] = Field(min_length=1)
@@ -89,12 +91,25 @@ class Chart(BaseModel):
         return {name: [[_decimal(v) for v in p] for p in pts] for name, pts in raw.items()}
 
     @model_validator(mode="after")
-    def _ordered(self) -> Self:
+    def _consistent(self) -> Self:
+        if self.status == "checked" and not (self.checked_by or "").strip():
+            raise ValueError("status 'checked' needs checked_by: who compared it with the figure")
         for name, points in self.curves.items():
             xs = [x for x, _ in points]
             if len(xs) < 2 or xs != sorted(set(xs)):
                 raise ValueError(f"curve {name!r}: needs 2+ points with increasing x")
+            for x, y in points:
+                if not (self.x.min <= x <= self.x.max and self.y.min <= y <= self.y.max):
+                    raise ValueError(f"curve {name!r}: point ({x}, {y}) is outside the axes")
         return self
+
+    @property
+    def x_range(self) -> tuple[Decimal, Decimal]:
+        """Where every curve has data: the range a call's x must be in."""
+        return (
+            max(p[0][0] for p in self.curves.values()),
+            min(p[-1][0] for p in self.curves.values()),
+        )
 
     @property
     def evidence(self) -> tuple[str, ...]:
@@ -189,6 +204,14 @@ def check_chart(charts: Mapping[str, Chart], **kwargs: object) -> ChartResult:
             f"{chart.x.name} {args.x} {chart.x.unit} is outside {chart.id} "
             f"({points[0][0]} to {points[-1][0]} {chart.x.unit}): the chart doesn't cover it"
         )
+    # A y off the chart is almost always a unit slip (0.5 vs 50, or x and y swapped): refuse
+    # it rather than answer confidently about a point the chart doesn't show.
+    if not chart.y.min <= args.y <= chart.y.max:
+        raise ChartError(
+            f"{chart.y.name} {args.y} {chart.y.unit} is off {chart.id}'s y axis "
+            f"({format_decimal(chart.y.min)} to {format_decimal(chart.y.max)} {chart.y.unit}): "
+            "check the units and that x and y aren't swapped"
+        )
     line = interpolate(points, args.x)
     margin = args.y - line
     on_fail_side = margin < 0 if chart.fails == "below" else margin > 0
@@ -225,13 +248,16 @@ def describe(charts: Mapping[str, Chart]) -> str:
     lines = [
         "Read a DMRB chart: is a point on the side of the line the standard says to avoid? "
         "Use it whenever a clause points to one of these figures; never read a chart "
-        "yourself. Inputs outside the chart are refused. Charts:"
+        "yourself. Inputs off the chart are refused. verdict 'marginal' means too close to "
+        "the line to call: say so and that an engineer should check. If needs_review is true, "
+        "give the warnings in your answer. Charts:"
     ]
     for c in charts.values():
-        curves = f"; curve one of {list(c.curves)}" if len(c.curves) > 1 else ""
+        low, high = c.x_range
+        curves = f"; curve is one of {list(c.curves)}" if len(c.curves) > 1 else ""
         lines.append(
-            f"- {c.id} ({', '.join(c.clauses)}): x = {c.x.name} ({c.x.unit}, "
-            f"{format_decimal(c.x.min)} to {format_decimal(c.x.max)}), y = {c.y.name} "
-            f"({c.y.unit}); avoid {c.fails} the line{curves}"
+            f"- {c.id} ({', '.join(c.clauses)}): x = {c.x.name} in {c.x.unit} "
+            f"({format_decimal(low)} to {format_decimal(high)}), y = {c.y.name} in {c.y.unit}; "
+            f"avoid {c.fails} the line{curves}"
         )
     return "\n".join(lines)
