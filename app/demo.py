@@ -9,7 +9,15 @@ that produced it.
 """
 
 import logging
+import sys
 import uuid
+from pathlib import Path
+
+# `streamlit run` puts app/ on the import path, not the repo root, so agent/ and core/
+# wouldn't import. The project isn't an installed package, so add the root here.
+ROOT = str(Path(__file__).resolve().parent.parent)
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
 
 import streamlit as st
 from azure.core.exceptions import AzureError

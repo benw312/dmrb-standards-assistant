@@ -426,3 +426,14 @@ guessing. Each rule cites its GG 101 source.
 - **Model text is sanitised before rendering:** no markdown images (the browser would fetch
   the URL) and `$` shown literally, not as LaTeX.
 - **Tested headless** with Streamlit's AppTest and a fake engine, so the page logic runs in CI.
+
+## 2026-10-26: demo adds the repo root to the import path
+
+- **Problem:** `streamlit run app/demo.py` puts `app/` on the import path, not the repo root,
+  so `agent` and `core` didn't import. AppTest and pytest hid it (pytest adds the root).
+- **Fix:** `app/demo.py` inserts the root before its imports; ruff's E402 is off for that file
+  only. A test runs the page as a plain script from a temp folder, which is how Streamlit
+  loads it.
+- **Not chosen:** making the project an installable package (`[build-system]` + package list).
+  It's the standard fix but adds a build backend and generic top-level names (`app`, `core`)
+  in site-packages, for one entry point. Revisit if a second script needs the same fix.
