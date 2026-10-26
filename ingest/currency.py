@@ -3,16 +3,18 @@
     uv run python -m ingest.currency
 
 For each entry in data/sources.yaml, looks the document up on the DMRB site's search API and
-reports whether the version we index is still the latest and not withdrawn. Exit code 1 if
-anything is out of date, so it can run on a schedule (e.g. a weekly CI job) and fail loudly:
-an assistant citing a superseded standard is worse than one that refuses.
+reports whether the version we index is still the latest and not withdrawn. Exit codes: 0 all
+current, 1 something is superseded / withdrawn / not found, 2 the site couldn't be checked.
+It runs weekly in CI and fails loudly: citing a superseded standard is worse than refusing.
 
 The API is the one the site's own pages call. It isn't a published, versioned API, so a
 change to it shows up here as an error to look at, never as "all current".
 """
 
+import http.client
 import json
 import sys
+import time
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Sequence
@@ -24,6 +26,8 @@ from ingest.sources import Source, load_sources
 SEARCH_URL = "https://www.standardsforhighways.co.uk/tses/v2/search"
 COLUMNS = "NODE_ID,DOCUMENT_REFERENCE,TITLE,REVISION,DATE_OF_ISSUE,DATE_OF_WITHDRAWAL"
 TIMEOUT_S = 30
+ATTEMPTS = 2  # one retry: a single flaky request shouldn't turn the weekly run red
+RETRY_WAIT_S = 5
 
 # GET url -> parsed JSON. Injectable so tests need no network.
 Fetch = Callable[[str], dict]
@@ -70,13 +74,19 @@ def _date(ms: int | None) -> str | None:
     return None if not ms else datetime.fromtimestamp(ms / 1000, UTC).date().isoformat()
 
 
-def http_get(url: str) -> dict:
+def http_get(url: str, attempts: int = ATTEMPTS, wait_s: float = RETRY_WAIT_S) -> dict:
     request = urllib.request.Request(url, headers={"Accept": "application/json"})
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:  # noqa: S310
-            return json.load(response)
-    except (OSError, ValueError) as err:
-        raise CurrencyError(f"couldn't query standardsforhighways.co.uk: {err}") from err
+    for attempt in range(1, attempts + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:  # noqa: S310
+                return json.load(response)
+        except (OSError, ValueError, http.client.HTTPException) as err:
+            # OSError covers HTTPError, URLError and timeouts; ValueError bad JSON;
+            # HTTPException a connection dropped mid-response.
+            if attempt == attempts:
+                raise CurrencyError(f"couldn't query standardsforhighways.co.uk: {err}") from err
+            time.sleep(wait_s)
+    raise AssertionError("unreachable")
 
 
 def search_url(code: str) -> str:
@@ -96,11 +106,15 @@ def check(source: Source, fetch: Fetch = http_get) -> Status:
         rows = [r["resultData"] for r in data["page"]]
         # The search matches on the reference, so "CD 109" can also return "CD 109 NAA".
         exact = [r for r in rows if r["DOCUMENT_REFERENCE"].strip() == source.code]
+        # Every row must have an issue date to pick the latest by; without one, "latest" would
+        # be an arbitrary row and could wrongly report ours as current.
+        if any(not isinstance(r.get("DATE_OF_ISSUE"), int) for r in exact):
+            raise TypeError("a result has no DATE_OF_ISSUE")
     except (KeyError, TypeError, AttributeError) as err:
         raise CurrencyError(f"{source.code}: unexpected API response ({err!r})") from err
     if not exact:
         return Status(source.code, source.version, None, None)
-    latest = max(exact, key=lambda r: r.get("DATE_OF_ISSUE") or 0)
+    latest = max(exact, key=lambda r: r["DATE_OF_ISSUE"])
     return Status(
         source.code,
         source.version,

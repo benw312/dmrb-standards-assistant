@@ -185,8 +185,10 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
   Worth knowing if you report errata.
 
 **Other**
-- [ ] Add each standard's document page URL to `data/sources.yaml` (chunk links currently
-  point at the site root).
+- [x] Document page and PDF URLs in `data/sources.yaml` (Claude, 2026-10-26, via the site's
+  API; the downloads match your PDFs). To put them in the chunk links, re-run
+  `uv run python -m ingest.chunk` then `uv run python -m index.rebuild` (<1p).
+  `uv run python -m ingest.currency` checks the standards are still current (weekly in CI).
 - [x] Phase 3: `agent/prompts/system.md` and the 10-answer check (Claude drafts, see top).
 - [ ] `evals/golden.yaml` (30–50 questions with answers) for Phase 6. The template's comments
   show the layout; the scorer is built, so `uv run python -m evals.golden` gives the
