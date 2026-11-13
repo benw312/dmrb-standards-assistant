@@ -29,7 +29,7 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 ### Data prep
 - [x] [Ben] CD 109 and GG 101 downloaded; licence checked (OGL v3.0)
 - [x] [Ben] Download CD 123 and CG 501
-- [ ] [Ben] Add document page URLs to `data/sources.yaml`
+- [x] [Ben] Add document page URLs to `data/sources.yaml` (done by CC from the site's API, PR #29)
 - [ ] [Ben] Start `evals/golden.yaml` (keep going on weekdays, 20-minute sessions). The file's
       comments show the layout (types: lookup, multi_hop, departure, calculation,
       out_of_scope). Target 30–50.
@@ -89,9 +89,12 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
         superelevation (Eq 4.2), transition length (Eq 4.13) (`agent/tools/equations.py`)
   - [ ] [CC] Tier 1, after Ben's confirmation: flow path length/gradient (CG 501 7.5.3),
         overtaking section from V²/R (Fig 9.23N2)
-  - [ ] [CC] Chart data format (`data/charts/*.yaml`), interpolation, out-of-range and marginal flags
-  - [ ] [Ben] Digitise CG 501 Fig 7.5.4 and 7.5.1, and CD 109 Fig 2.1 (WebPlotDigitizer)
-  - [ ] [CC] Tier 2 chart tools: Fig 7.5.4, Fig 7.5.1, design speed from Fig 2.1 + Table 2.3
+  - [x] [CC] Chart data format (`data/charts/*.yaml`), interpolation, out-of-range and marginal flags
+        (`agent/tools/charts.py`, PR #28)
+  - [ ] [Ben] Check the machine-read CG 501 Fig 7.5.4 and 7.5.1, and CD 109 Fig 2.1, against the
+        figures (`ingest/digitise.py`, `ingest/digitise_bands.py`; drafts until checked)
+  - [x] [CC] Tier 2 chart tools: Fig 7.5.4 and Fig 7.5.1 (`check_chart`)
+  - [ ] [CC] Design speed from Fig 2.1 + Table 2.3 (after Ben's three reading rules, HANDOVER)
   - [ ] [CC] Flagship chain: bendiness/VISI/verge/road type -> design speed -> Table 2.10 values
   - [ ] [Ben] Decide tier 3: CD 123 Fig 2.3.1 junction type (build?), Fig 9.23N2 verge inset
   - [x] [CC] CG 501 Fig 2.5 flowchart: indexed as figure chunk `CG501-Figure-2.5` (no tool)
@@ -122,7 +125,8 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [ ] [Ben] CV line with the real number; LinkedIn post
 
 ## Later (if time)
-Full Phase 5 SQLite review queue, Container Apps deploy, MCP server for the tools, widen to more standards.
+Full Phase 5 SQLite review queue, Container Apps deploy, widen to more standards.
+Done: MCP server (`app/mcp_server.py`, PR #31).
 
 ## Habits
 - End of each session: CC appends to `DECISIONS.md`; Ben rewrites it in his own words.
