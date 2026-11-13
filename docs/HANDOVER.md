@@ -1,22 +1,22 @@
 # Handover: where the project stands
 
 Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DECISIONS.md`
-(why things are the way they are). Last updated 2026-10-26: Phases 2–4 built, two charts machine-read.
+(why things are the way they are). Last updated 2026-11-13: PRs #27–#39 merged, no PRs open; CD 109 has been superseded (see Next steps).
 
 ## Status
 
 | Phase | State |
 |---|---|
 | 0. Setup | Done. Azure resources live, smoke test 4/4 (`uv run python -m core.smoke_test`) |
-| 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 656 chunks; Ben's 20-chunk review fixed (PR #15) |
+| 1. Ingest | Done. 4 standards parsed (313 pages, ~$3.13) and chunked into 657 chunks; Ben's 20-chunk review fixed (PR #15) |
 | 2. Index | Done. 657 documents; semantic recall@5 100%, MRR 0.83 on 20 questions (README) |
 | 3. RAG | Done. `agent/rag.py`, 9/10 on the hand check (`evals/rag_check.md`); prompt is a Claude draft |
 | 4. Agent | Built. `agent/loop.py` (11 tools, 6 steps, traces) and `agent/graph.py` (LangGraph, pause-for-review); 9/10 first run (`evals/agent_check.md`). `check_chart` reads CG 501 Fig 7.5.1 / 7.5.4 (machine-read drafts, Ben to check) |
 | 5. Review | Escalation flag only; LangGraph pause is the mechanism for a queue |
 | 6. Eval | Scorer built (`evals/golden.py`); waiting on Ben's `evals/golden.yaml` |
-| 7. Ship | REST API (`app/api.py`) and Streamlit demo (`app/demo.py`) built; demo GIF is Ben's |
+| 7. Ship | REST API (`app/api.py`), Streamlit demo (`app/demo.py`) and MCP server (`app/mcp_server.py`) built; demo GIF is Ben's |
 
-Open PRs (stacked, merge in order): #20 retrieval → #21 Phase 3 prompt → #22 agent loop → #23 LangGraph → #24 API.
+Open PRs: none (2026-11-13). Everything up to #39 is squash-merged into `main`.
 
 ## Azure as built
 
@@ -52,6 +52,8 @@ uv run python -m ingest.chunk                  # data/parsed/ -> data/chunks/*.j
 uv run python -m ingest.chunk --show CD109-2.2 # print one chunk with heading path and page
 uv run python -m index.rebuild                 # embed chunks, recreate the index (~1 min, <1p)
 uv run python -m ingest.digitise               # chart images -> data/charts/<id>.yaml + check overlays
+uv run python -m ingest.digitise_bands         # CD 109 Fig 2.1 -> data/charts/design_speed/ + overlay
+uv run python -m ingest.currency               # are the indexed standards still current? (weekly in CI)
 uv run python -m evals.recall                  # recall@5 per mode on evals/retrieval.yaml
 uv run python -m evals.recall --modes semantic --k 8
 uv run python -m agent.rag "<question>"        # Phase 3 RAG baseline
@@ -60,6 +62,7 @@ uv run python -m agent.graph "<question>"      # same agent on LangGraph; --merm
 uv run uvicorn app.api:app                     # REST API, docs at http://127.0.0.1:8000/docs
 uv run python -m evals.golden                  # score rag/agent/graph on evals/golden.yaml
 uv run streamlit run app/demo.py               # demo UI
+uv run python -m app.mcp_server                # MCP server (stdio); --with-tools adds the raw tools
 ```
 
 ## Pipeline
@@ -126,6 +129,17 @@ Answers cite inline as `[CD 109 cl. 5.3.1]`, `[CD 109 Table 3.5]`, `[CD 109 Glos
 
 ### Ben: open checks
 
+**CD 109 has been superseded (found 2026-11-13)**
+- [ ] `uv run python -m ingest.currency` reports `CD 109: SUPERSEDED: latest is 1.1.0, we index
+  Revision 1`. The site lists CD 109 version 1.1.0, issued 2026-10-30, as the only current
+  version, so the weekly "DMRB currency" workflow will fail until the index is updated.
+  To update: download the new PDF, edit the CD 109 entry in `data/sources.yaml` (version,
+  date, filename, and the new `url` / `pdf_url`), then `ingest.parse "CD 109"` (billed, about
+  105 pages), `ingest.chunk`, `index.rebuild`. Then re-check what was read from Revision 1:
+  the equation tools (`evals/equation_check.md`), Table 2.10, Figure 2.1
+  (`ingest.digitise_bands`, which has the page number fixed in code) and the CD 109 retrieval
+  questions. Until then answers cite Revision 1 and say so.
+
 **Claude drafts standing in for Ben's inputs** (added 2026-10-25 so work wasn't blocked; each
 is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
 - [ ] `evals/retrieval.yaml`: citations written in full (`CD 123 cl. 5.8`, not `5.8`); figures
@@ -140,10 +154,8 @@ is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
 - [ ] Tool descriptions in `agent/tools/registry.py` (the text the model reads to choose a
   tool), and `evals/agent_check.md` (agent on the same 10 questions). Read 2-3 traces in
   `traces/` to see how it searches.
-- [ ] `.claude/settings.json` still denies Claude edits to `evals/golden.jsonl`; the golden set
-  is now `evals/golden.yaml` (YAML, like the retrieval questions). Claude didn't change its own
-  permissions: swap the two deny lines to `golden.yaml` (and add `retrieval.yaml` if you want
-  it locked too, now its tidy-up is done).
+- [x] `.claude/settings.json` deny rules now name `evals/golden.yaml` and
+  `evals/retrieval.yaml` (PR #38), so Claude can't edit either ground-truth file.
 - [ ] Scoring rule to confirm (`evals/scoring.py`): when your golden answer is `departure:
   false`, an answer that doesn't mention a departure (null) counts as correct. Agree?
 - [ ] `agent/graph.py` (LangGraph version) and `docs/ARCHITECTURE.md`: read both so you can
@@ -222,7 +234,8 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
 
 1. When `evals/golden.yaml` has questions: run `evals.golden`, put the table in the README,
    then the `azure-ai-evaluation` judges over `evals/results/*.jsonl`.
-2. Demo: link clause badges to the PDF page once `sources.yaml` has document URLs.
+2. Demo: link clause badges to the document page (`sources.yaml` has the URLs since PR #29;
+   chunks pick them up on the next `ingest.chunk` + `index.rebuild`).
 3. After Ben's confirmations: CG 501 flow-path and Fig 9.23N2 tools; CD 109 Fig 2.1 and the
    design speed chain (bendiness -> Ac -> Fig 2.1 with Table 2.3's Lc -> design speed).
 4. Foundry built-in search-tool variant once the Search connection exists in Foundry.

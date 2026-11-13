@@ -20,7 +20,7 @@ flowchart TB
     subgraph Answer["Answer (per question)"]
         Q[Question] --> A{RAG baseline<br/>or agent}
         A -->|rag.py| R[search top 8 → one model call]
-        A -->|loop.py / graph.py| G[model ⇄ 10 tools, ≤ 6 steps]
+        A -->|loop.py / graph.py| G[model ⇄ 11 tools, ≤ 6 steps]
         R --> V[Citation gate<br/>citations.py]
         G --> V
         V -->|pass| OK[Cited answer]
@@ -37,7 +37,7 @@ flowchart TB
 | Index | `index/` | Embeds `heading path + text`; one index, four query modes for comparison |
 | Retrieve | `index/search.py`, `agent/tools/search_tool.py` | Hybrid search re-ranked semantically; a retrieved table pulls in the clauses that cite it |
 | Reason | `agent/rag.py`, `agent/loop.py`, `agent/graph.py` | Structured output (`Answer`): text, citations, requirement strength, departure flag, confidence, review flag |
-| Compute | `agent/tools/equations.py`, `check_limit.py` | CD 109 equations and limit checks in exact decimals; the model only supplies inputs |
+| Compute | `agent/tools/equations.py`, `check_limit.py`, `charts.py` | CD 109 equations, limit checks and chart readings (`check_chart`, from `data/charts/`) in exact decimals; the model only supplies inputs |
 | Verify | `agent/citations.py` | Parses every citation in the answer; each must be something a tool returned this run |
 | Observe | `agent/trace.py` | One JSONL line per model call, tool call and check |
 | Serve | `app/api.py`, `app/demo.py`, `app/mcp_server.py` | One engine behind REST, a Streamlit UI and an MCP server; MCP's `ask_dmrb` keeps the citation gate, raw tools are building blocks |

@@ -20,7 +20,7 @@ flowchart LR
     PDF[DMRB PDFs] --> DI[Document Intelligence<br/>clause-level chunks]
     DI --> AIS[(Azure AI Search<br/>hybrid + semantic)]
     Q[Engineer question] --> AG[Agent loop<br/>Azure AI Foundry]
-    AG <-->|function calls| T[10 tools<br/>search · get_clause · get_table<br/>CD 109 equations · check_limit]
+    AG <-->|function calls| T[11 tools<br/>search · get_clause · get_table<br/>CD 109 equations · check_limit · check_chart]
     T --> AIS
     AG --> G{Confident and<br/>no departure?}
     G -->|yes| A[Cited answer]
@@ -83,13 +83,13 @@ to `claude_desktop_config.json`:
 | Phase | Scope | Status |
 |---|---|---|
 | 0. Setup | Repo, CI, Azure resources (keyless auth) | Done |
-| 1. Ingest | PDFs → clause chunks with metadata | Done: 4 standards, 654 chunks |
+| 1. Ingest | PDFs → clause chunks with metadata | Done: 4 standards, 657 chunks |
 | 2. Index | Hybrid vector + keyword index, recall@5 | Done: semantic recall@5 **100%**, MRR 0.83 (20 questions) |
 | 3. RAG | Cited answers or refusal | Done: 9/10 on a first hand-judged check ([evals/rag_check.md](evals/rag_check.md)) |
-| 4. Agent | Tool-calling loop with traces | Built: 10 tools, 6-step loop, JSONL traces; 9/10 first run ([evals/agent_check.md](evals/agent_check.md)) |
-| 5. Human review | Confidence gate and escalation | Not started |
-| 6. Evaluation | Golden set, metrics, model comparison | Not started |
-| 7. Ship | REST API, Streamlit demo | Built: `app/api.py` (`POST /ask`) and `app/demo.py`; demo GIF to record |
+| 4. Agent | Tool-calling loop with traces | Built: 11 tools, 6-step loop, JSONL traces; 9/10 first run ([evals/agent_check.md](evals/agent_check.md)). Chart readings are machine-read drafts, flagged for review until an engineer checks them |
+| 5. Human review | Confidence gate and escalation | Escalation flag built; the LangGraph version can pause for review. Review queue not built |
+| 6. Evaluation | Golden set, metrics, model comparison | Scorer built (`evals/golden.py`); golden set being written, so no scores yet |
+| 7. Ship | REST API, Streamlit demo | Built: `app/api.py` (`POST /ask`), `app/demo.py` and an MCP server (`app/mcp_server.py`); demo GIF to record |
 
 ## Retrieval results
 
@@ -146,13 +146,13 @@ with [`scripts/azure_teardown.sh`](scripts/azure_teardown.sh).
 ## Project layout
 
 ```
-ingest/    PDF parsing and clause chunking
+ingest/    PDF parsing, clause chunking, chart reading, currency check
 index/     Azure AI Search schema and rebuild
 agent/     RAG pipeline, agent loop and tools
 evals/     Metrics and evaluation runners
-app/       REST API (FastAPI) and Streamlit demo
+app/       REST API (FastAPI), Streamlit demo and MCP server
 scripts/   Azure setup and teardown
-data/      sources.yaml (PDFs and parsed text are not committed)
+data/      sources.yaml and chart data (PDFs and parsed text are not committed)
 ```
 
 ## Licence and disclaimer
