@@ -42,3 +42,7 @@ select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 
 [tool.coverage.run]
 source = ["core", "ingest", "index", "agent", "evals", "app"]
+
+[tool.ruff.lint.per-file-ignores]
+# demo.py fixes the import path before its imports (see the comment there).
+"app/demo.py" = ["E402"]
