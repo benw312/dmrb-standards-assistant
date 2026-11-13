@@ -58,7 +58,7 @@ def _show_flagged(item: ReviewItem) -> None:
     st.markdown("**Flagged because:**")
     for reason in flagged.reasons:
         st.markdown(f"- {safe_markdown(reason)}")
-    st.markdown("**The model's answer** (not verified):")
+    st.markdown("**The model's answer** (awaiting your verdict):")
     with st.container(border=True):
         st.markdown(safe_markdown(flagged.answer))
     departure = {True: "yes", False: "no", None: "n/a"}[flagged.is_departure]
@@ -103,12 +103,20 @@ def _record(queue: ReviewQueue, review_id: int) -> None:
             "success",
             f"Recorded: #{review_id} {verdict.outcome} by {verdict.reviewer}.",
         )
-        state.note, state.expected = "", ""  # the name stays for the next review
+        state.note, state.expected = "", ""
+        state.reviewer_name = verdict.reviewer  # offered again on the next review
 
 
 def _verdict_form(queue: ReviewQueue, item: ReviewItem) -> None:
     with st.form("verdict"):
-        st.text_input("Your name", key="reviewer", max_chars=100)
+        # Streamlit forgets a widget's value once it isn't drawn (an empty queue hides the
+        # form), so the name is also kept under its own key and offered as the default.
+        st.text_input(
+            "Your name",
+            key="reviewer",
+            value=st.session_state.get("reviewer_name", ""),
+            max_chars=100,
+        )
         st.radio("Verdict", list(OUTCOMES), format_func=OUTCOMES.get, key="outcome")
         st.text_area(
             "Note (required for a correction: what the right answer is)", key="note", height=90

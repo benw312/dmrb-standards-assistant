@@ -160,3 +160,16 @@ def test_split_citations_accepts_commas_semicolons_and_lines():
         "CG 501 cl. 7.5.4",
     ]
     assert split_citations("  ") == []
+
+
+def test_the_name_is_remembered_after_the_queue_has_been_empty(demo, review_queue):
+    # Found in a browser: with nothing left to review the form isn't drawn, and Streamlit
+    # drops the value of a widget that isn't drawn.
+    review_queue.add(flagged())
+    at = _submit(demo())
+    assert "Nothing is waiting for review." in _texts(at)
+
+    review_queue.add(flagged(question="A later question?"))
+    at.run()
+
+    assert at.text_input(key="reviewer").value == "Ben Wallbridge"
