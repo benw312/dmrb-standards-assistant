@@ -73,7 +73,7 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - **Done when:** 10 cited answers; "speed limit on a motorway?" → "not covered" (done 2026-10-25)
 
 ## Weekdays
-- [ ] [Ben] Golden set to 30–50 rows
+- [ ] [Ben] Golden set to 30–50 rows (`uv run streamlit run evals/golden_editor.py`)
 
 ## Weekend 2: Phases 4, 6, minimal 7
 

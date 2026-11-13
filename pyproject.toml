@@ -48,3 +48,5 @@ source = ["core", "ingest", "index", "agent", "evals", "app"]
 [tool.ruff.lint.per-file-ignores]
 # demo.py fixes the import path before its imports (see the comment there).
 "app/demo.py" = ["E402"]
+# Same for the golden set editor, the other page started with `streamlit run`.
+"evals/golden_editor.py" = ["E402"]
