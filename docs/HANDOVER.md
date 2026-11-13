@@ -60,6 +60,7 @@ uv run python -m agent.rag "<question>"        # Phase 3 RAG baseline
 uv run python -m agent.loop "<question>"       # Phase 4 agent (trace in traces/)
 uv run python -m agent.graph "<question>"      # same agent on LangGraph; --mermaid draws it
 uv run uvicorn app.api:app                     # REST API, docs at http://127.0.0.1:8000/docs
+uv run streamlit run evals/golden_editor.py    # form for writing evals/golden.yaml (no model calls)
 uv run python -m evals.golden                  # score rag/agent/graph on evals/golden.yaml
 uv run streamlit run app/demo.py               # demo UI
 uv run python -m app.mcp_server                # MCP server (stdio); --with-tools adds the raw tools
@@ -225,7 +226,10 @@ Ordered roughly by what unblocks the most. Tick them off here (or in PLAN.md) as
   `uv run python -m ingest.chunk` then `uv run python -m index.rebuild` (<1p).
   `uv run python -m ingest.currency` checks the standards are still current (weekly in CI).
 - [x] Phase 3: `agent/prompts/system.md` and the 10-answer check (Claude drafts, see top).
-- [ ] `evals/golden.yaml` (30–50 questions with answers) for Phase 6. The template's comments
+- [ ] `evals/golden.yaml` (30–50 questions with answers) for Phase 6. Quickest way:
+  `uv run streamlit run evals/golden_editor.py`, a form that finds clauses, checks the entry
+  and appends it (it never asks a model, and only ever adds to the end of the file; you can
+  still edit the file by hand). "Start from" prefills your retrieval questions. The template's comments
   show the layout; the scorer is built, so `uv run python -m evals.golden` gives the
   RAG vs agent vs graph table as soon as there are questions. You can reuse the 20
   retrieval questions and the 10 check questions as a start.

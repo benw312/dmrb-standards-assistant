@@ -127,6 +127,7 @@ cp .env.example .env              # fill in endpoints and deployment names
 
 uv run python -m index.rebuild    # embed data/chunks/ and recreate the search index
 uv run python -m evals.recall     # recall@5 per search mode on evals/retrieval.yaml
+uv run streamlit run evals/golden_editor.py  # form for writing the golden set by hand
 uv run python -m agent.rag "What is the maximum gradient on a motorway?"    # RAG baseline
 uv run python -m agent.loop "Superelevation for R = 510 m at 100 kph, rural?" # agent
 uv run python -m agent.graph "Superelevation for R = 510 m at 100 kph, rural?" # LangGraph agent

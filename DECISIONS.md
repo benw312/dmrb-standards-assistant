@@ -494,3 +494,22 @@ guessing. Each rule cites its GG 101 source.
   the form an engineer can check line by line. It's kept out of `check_chart`'s directory
   (`data/charts/design_speed/`) because it isn't an avoid-the-line chart; the design speed
   tool that uses it waits on three reading rules from Ben (HANDOVER).
+
+## 2026-11-13: a form for writing the golden set (`evals/golden_editor.py`)
+
+- **Why:** 30–50 questions typed as YAML is slow and easy to get wrong (a missed quote, a
+  clause number that doesn't exist). The form finds clauses, checks the entry and writes the
+  block.
+- **No model, on purpose.** It never suggests an answer, a strength or a departure flag, and
+  the clause finder is a plain word search over `data/chunks/`, not the Azure index. Ground
+  truth drafted by the system being measured, or found only through its own retriever,
+  would measure the system against itself. The one prefill is Ben's own retrieval questions.
+- **Append only.** Existing text and comments are never rewritten. The new file is built
+  beside the old one, read back with the real loader, and swapped in only if every earlier
+  question is unchanged and the new one reads back exactly as entered (`golden_write.py`).
+- **Claude still can't write the file:** the deny rule stands, the tool runs only when Ben
+  starts it, and every test works on a temp copy (`GOLDEN_FILE`, set in `tests/conftest.py`).
+- **Editing or deleting** a saved question is done by hand in the file; the form is for adding.
+- **Second `streamlit run` script,** so it has the same import-path lines as `app/demo.py`.
+  Packaging the project is still not worth it for two entry points.
+
