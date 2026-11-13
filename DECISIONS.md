@@ -437,3 +437,18 @@ guessing. Each rule cites its GG 101 source.
 - **Not chosen:** making the project an installable package (`[build-system]` + package list).
   It's the standard fix but adds a build backend and generic top-level names (`app`, `core`)
   in site-packages, for one entry point. Revisit if a second script needs the same fix.
+
+## 2026-10-26: source links from the DMRB site's API, and a weekly currency check
+
+- **Links:** `url` in `data/sources.yaml` is each document's page on standardsforhighways.co.uk
+  (`/search/<nodeId>`), which shows its versions and any withdrawal; `pdf_url` downloads the
+  PDF. Found through the API the site's own pages call (`/tses/v2/search`). Each download
+  matched the local PDF page for page; only the "Downloaded on" margin stamp differs.
+- **Chunk links** still append `#page=N`. The PDF is served as a download, so no link can
+  open a page directly; the page number is kept for the reader. They update on the next
+  `ingest.chunk` + index rebuild.
+- **Currency check:** `uv run python -m ingest.currency` asks the site whether each indexed
+  version is still the latest and not withdrawn; exit 1 if not. A weekly GitHub Action runs
+  it. Citing a superseded standard is worse than refusing, so this fails loudly.
+- **Trade-off:** the API isn't published or versioned. A change to it makes the check error
+  (exit 2), never report "all current".
