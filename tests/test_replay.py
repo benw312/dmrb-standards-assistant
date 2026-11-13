@@ -209,3 +209,14 @@ def test_the_file_is_plain_json_a_person_can_read(tmp_path):
         "CD109-5.1",
         "CD109-Table-5.1",
     ]
+
+
+def test_the_committed_recording_answers_every_example_in_every_pipeline():
+    # The demo offers these questions; in replay mode none of them may dead-end. Fails when
+    # an example is added or reworded without re-running `python -m app.record_demo`.
+    from app.presentation import EXAMPLES
+
+    replay = ReplayAnswerer(load_recorded())
+    for question in EXAMPLES:
+        for mode in MODES:
+            assert replay(question, mode).question == question

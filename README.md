@@ -127,6 +127,25 @@ Python 3.12 · uv · Azure AI Foundry (`azure-ai-projects` 2.x, Responses API) �
 Azure AI Document Intelligence · LangGraph · `azure-ai-evaluation` · Pydantic · pytest ·
 GitHub Actions
 
+## Try it without Azure
+
+The project isn't hosted, so the demo can replay answers recorded from the live system. It
+needs only [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync
+DEMO_REPLAY=1 uv run streamlit run app/demo.py
+```
+
+Pick one of the five example questions and any of the three pipelines. Each answer is a real
+run stored whole (`data/demo/answers.json`): the text, citations, checks, tool calls, tokens
+and timing. Flagged answers go on the review queue as they do live, so the Review queue tab
+works too. Questions that weren't recorded are refused, never matched to the nearest one.
+
+Worth trying: ask the superelevation example with the RAG baseline, then with the agent. The
+recorded baseline answers 5%; the agent calls the Equation 4.2 tool and answers 6.93%. Both
+pass the citation check, which is why the model isn't allowed to do the arithmetic.
+
 ## Getting started
 
 Prerequisites: [uv](https://docs.astral.sh/uv/), the Azure CLI, and an Azure subscription.
@@ -147,6 +166,7 @@ uv run uvicorn app.api:app        # REST API; interactive docs at http://127.0.0
 uv run streamlit run app/demo.py  # demo UI
 uv run python -m app.mcp_server   # MCP server (stdio), for other agents
 uv run python -m review.export    # engineer verdicts as golden-set candidates
+uv run python -m app.record_demo  # re-record the answers that DEMO_REPLAY=1 replays
 ```
 
 ```bash
@@ -167,7 +187,7 @@ evals/     Metrics and evaluation runners
 review/    Engineer review queue and verdict export
 app/       REST API (FastAPI), Streamlit demo and MCP server
 scripts/   Azure setup and teardown
-data/      sources.yaml and chart data (PDFs and parsed text are not committed)
+data/      sources.yaml, chart data and the recorded demo answers (PDFs and parsed text are not committed)
 ```
 
 ## Licence and disclaimer

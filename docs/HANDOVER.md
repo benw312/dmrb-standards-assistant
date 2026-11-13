@@ -64,6 +64,8 @@ uv run python -m evals.golden                  # score rag/agent/graph on evals/
 uv run streamlit run app/demo.py               # demo UI
 uv run python -m app.mcp_server                # MCP server (stdio); --with-tools adds the raw tools
 uv run python -m review.export                 # engineer verdicts -> golden-set candidates (stdout)
+DEMO_REPLAY=1 uv run streamlit run app/demo.py # demo on recorded answers, no Azure needed
+uv run python -m app.record_demo               # re-record them (15 live runs, pennies)
 ```
 
 ## Pipeline
@@ -162,6 +164,12 @@ is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
   want a third, e.g. "right answer, wrong clause"? Try it: ask the demo a departure
   question, open the Review queue tab, record a verdict, then `uv run python -m review.export`.
   The queue file is local and git-ignored; `REVIEW_DB` moves it.
+- [ ] Recorded demo (`data/demo/answers.json`, recorded 2026-11-13 from CD 109 Revision 1):
+  read the 15 answers (`DEMO_REPLAY=1 uv run streamlit run app/demo.py`). The RAG baseline
+  gives 5% for the 510 m / 100 kph superelevation example where the agent gives 6.93%; the
+  README points at that contrast. Happy to show a wrong baseline answer? Re-record with
+  `uv run python -m app.record_demo` after the CD 109 update, a prompt change or a new
+  example (a test fails if an example has no recording).
 - [ ] Scoring rule to confirm (`evals/scoring.py`): when your golden answer is `departure:
   false`, an answer that doesn't mention a departure (null) counts as correct. Agree?
 - [ ] `agent/graph.py` (LangGraph version) and `docs/ARCHITECTURE.md`: read both so you can
