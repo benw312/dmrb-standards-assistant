@@ -44,8 +44,9 @@ Draft by Claude, 2026-10-26, for Ben to review and put in his own words.
   the answer suggests a Departure from Standard, confidence is low, a chart reading is within
   its tolerance of the line, chart data hasn't been checked by an engineer, or the agent hits its
   step or time limit. Escalated answers are shown as "Unverified" with their details hidden.
-- **Review queue:** every escalated or flagged answer is stored with the reasons
-  (`review/queue.py`). An engineer records one verdict per answer, approved or corrected; it
+- **Review queue:** escalated and flagged answers are stored with the reasons
+  (`review/queue.py`); if the queue can't be written the answer is still returned flagged,
+  and the failure is logged. An engineer records one verdict per answer, approved or corrected; it
   can't be overwritten, so the queue is the audit trail. Verdicts become candidate test cases.
   The prototype takes the reviewer's name on trust; a deployment would authenticate them.
 - **Pause for review:** the LangGraph version can stop before the answer is released and resume

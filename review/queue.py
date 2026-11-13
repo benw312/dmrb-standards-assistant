@@ -180,7 +180,8 @@ class ReviewQueue:
         return _item(row)
 
     def list(self, status: Status | None = None, limit: int = MAX_LISTED) -> list[ReviewItem]:
-        """Pending: oldest first (the order to work through). Resolved: newest first."""
+        """Pending: oldest first (the order to work through). Resolved: newest first.
+        limit=-1 returns every row (SQLite reads a negative LIMIT as no limit)."""
         where = {
             "pending": "WHERE verdict IS NULL ORDER BY id",
             "resolved": "WHERE verdict IS NOT NULL ORDER BY resolved_at DESC, id DESC",
@@ -207,7 +208,15 @@ class ReviewQueue:
         return _item(row)
 
     def stats(self) -> QueueStats:
-        counts = {"pending": 0, "approved": 0, "corrected": 0}
-        for item in self.list(limit=-1):  # SQLite: a negative LIMIT means no limit
-            counts[item.verdict.outcome if item.verdict else "pending"] += 1
-        return QueueStats(**counts)
+        # Counted in SQL: this runs on every GET /reviews, so it shouldn't parse every row.
+        with self._db() as db:
+            rows = db.execute(
+                "SELECT COALESCE(json_extract(verdict, '$.outcome'), 'pending') AS state, "
+                "COUNT(*) AS n FROM reviews GROUP BY state"
+            ).fetchall()
+        counts = {row["state"]: row["n"] for row in rows}
+        return QueueStats(
+            pending=counts.get("pending", 0),
+            approved=counts.get("approved", 0),
+            corrected=counts.get("corrected", 0),
+        )

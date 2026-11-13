@@ -15,9 +15,10 @@ that file: ground truth stays hand-checked. What a verdict can and can't supply:
 marked TODO.
 """
 
-import json
 import sys
 from collections.abc import Iterable, Sequence
+
+import yaml
 
 from agent.citations import CitationError, display_citation
 from review.queue import ReviewError, ReviewItem, ReviewQueue
@@ -29,15 +30,23 @@ HEADER = """\
 
 
 def _quoted(text: str) -> str:
-    # A JSON string is a valid YAML double-quoted scalar; newlines become \\n on one line.
-    return json.dumps(text, ensure_ascii=False)
+    """A YAML double-quoted scalar on one line. PyYAML does the escaping: model text can
+    hold characters (NEL, C1 controls) that are legal in JSON but change or break YAML."""
+    return yaml.safe_dump(text, default_style='"', allow_unicode=True, width=float("inf")).strip()
+
+
+def _comment(text: str) -> str:
+    """Text safe to put after '#': one line, printable characters only."""
+    return " ".join("".join(c if c.isprintable() else " " for c in text).split())
 
 
 def _cite(chunk_id: str) -> str:
     try:
         return display_citation(chunk_id).strip("[]")
     except CitationError:
-        return chunk_id  # shown as stored; golden.yaml's loader will name the problem
+        # Shown as stored, but quoted so it can't break the list; golden.yaml's loader
+        # will name the problem.
+        return _quoted(chunk_id)
 
 
 def candidate(item: ReviewItem) -> str:
@@ -49,8 +58,8 @@ def candidate(item: ReviewItem) -> str:
     expected = verdict.expected or (flagged.citations if approved else ())
     # One line, whatever the text holds: a line break here would end the comment and let
     # the rest be read as YAML.
-    why = " ".join("; ".join(flagged.reasons).split())
-    who = " ".join(verdict.reviewer.split())
+    why = _comment("; ".join(flagged.reasons))
+    who = _comment(verdict.reviewer)
     lines = [
         f"# Review {item.id}: {verdict.outcome} by {who}, {item.resolved_at:%Y-%m-%d}. "
         f"Flagged because: {why}",

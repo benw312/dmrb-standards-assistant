@@ -1,5 +1,6 @@
 """Verdicts as golden-set candidates: an approved one must load as a real golden question."""
 
+import pytest
 import yaml
 
 from evals.golden import GoldenQuestion
@@ -112,3 +113,32 @@ def test_main_reports_an_unreadable_queue(tmp_path, capsys):
     path.write_text("not a database " * 30)
     assert main([], ReviewQueue(path)) == 1
     assert "error:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "awkward",
+    ["a\x85b", "del\x7fete", "c1\x80\x9f", "line\u2028sep", "bom\ufeff\ufffe", 'q"uote\\ #x: [y]'],
+)
+def test_awkward_characters_survive_the_round_trip(tmp_path, awkward):
+    # NEL folds to a space and C1 controls are a reader error in YAML unless escaped.
+    text = awkward
+    verdict = Verdict(outcome="corrected", reviewer="Ben", note=text)
+    item, _ = _resolved(tmp_path, verdict, question=text, answer=text, reasons=(text,))
+
+    row = _load(candidate(item))
+
+    assert row["query"] == text and row["answer"] == text
+    assert row["notes"] == "Model answered (wrong): " + text
+
+
+def test_text_in_the_comment_line_cannot_start_a_new_yaml_line(tmp_path):
+    verdict = Verdict(outcome="approved", reviewer="Ben\x85- id: EVIL\x7f")
+    item, _ = _resolved(tmp_path, verdict, reasons=("why\n- id: EVIL2", "x\u2028y"))
+    text = candidate(item)
+    assert text.splitlines()[0].startswith("# Review 1: approved by Ben - id: EVIL")
+    assert [r["id"] for r in yaml.safe_load(text)] == ["R001"]
+
+
+def test_a_citation_that_isnt_one_is_quoted_not_allowed_to_break_the_list(tmp_path):
+    item, _ = _resolved(tmp_path, APPROVED, citations=("CD109-5.1", "x, y] #z: q"))
+    assert _load(candidate(item))["expected"] == ["CD 109 cl. 5.1", "x, y] #z: q"]
