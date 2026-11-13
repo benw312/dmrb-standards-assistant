@@ -4,12 +4,14 @@ Shared by the REST API (app/api.py) and the golden-set runner (evals/golden.py),
 exercise exactly the same wiring.
 """
 
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 from agent.loop import AgentResult
 from agent.rag import RagResult
+from agent.replay import REPLAY_ENV, ReplayAnswerer, load_recorded
 
 if TYPE_CHECKING:
     from agent.tools.registry import Tool
@@ -22,6 +24,16 @@ Answerer = Callable[[str, Mode], AgentResult | RagResult]
 class LiveEngine:
     answer: Answerer
     tools: "tuple[Tool, ...]"  # the agent's own tools, bound to the same clients
+
+
+def replay_enabled() -> bool:
+    return os.environ.get(REPLAY_ENV) == "1"
+
+
+def build_answerer() -> Answerer:
+    """The live engine, or recorded answers when DEMO_REPLAY=1 (no Azure needed). What the
+    REST API and the demo use; evals and the MCP server always go live."""
+    return ReplayAnswerer(load_recorded()) if replay_enabled() else build_live_answerer()
 
 
 def build_live_answerer() -> Answerer:  # pragma: no cover - wires live Azure clients

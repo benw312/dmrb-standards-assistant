@@ -9,6 +9,9 @@ A flagged answer is still a 200: needing an engineer is a result, not an error. 
 also put on the review queue (review/queue.py) and the response carries its `review_id`;
 GET /reviews and POST /reviews/{id}/verdict are in app/review_api.py.
 
+With DEMO_REPLAY=1 the engine replays recorded answers instead of calling Azure
+(agent/replay.py); a question with no recording is a 404.
+
 Errors: 422 bad request; 503 the service isn't configured (settings or system prompt
 missing); 502 an Azure call failed; 500 anything else. Error bodies carry only a request ID,
 which is in the server log next to the detail.
@@ -35,9 +38,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent.answer import Confidence, RequirementType
 from agent.citations import CitationError, display_citation
-from agent.engine import Answerer, Mode, build_live_answerer
+from agent.engine import Answerer, Mode, build_answerer
 from agent.loop import AgentResult
 from agent.rag import DISCLAIMER, RagError, RagResult, with_disclaimer
+from agent.replay import NotRecordedError, ReplayError
 from app.review_api import get_queue
 from app.review_api import router as review_router
 from core.settings import SettingsError
@@ -182,7 +186,7 @@ class LazyAnswerer:
         return self._answerer
 
 
-_LIVE = LazyAnswerer(build_live_answerer)
+_LIVE = LazyAnswerer(build_answerer)
 
 
 def get_answerer() -> Answerer:
@@ -190,7 +194,7 @@ def get_answerer() -> Answerer:
     messages name environment variables)."""
     try:
         return _LIVE.get()
-    except (SettingsError, RagError, AzureError, ValueError) as err:
+    except (SettingsError, RagError, ReplayError, AzureError, ValueError) as err:
         logger.error("Answer engine not configured: %s", err)
         raise HTTPException(status_code=503, detail="The service is not configured.") from err
 
@@ -219,6 +223,7 @@ def create_app() -> FastAPI:
         tags=["answers"],
         summary="Answer a DMRB question with checked citations",
         responses={
+            404: {"model": ErrorBody, "description": "Replay mode: question not recorded"},
             500: {"model": ErrorBody},
             502: {"model": ErrorBody, "description": "An Azure service call failed"},
             503: {"description": "The service is not configured"},
@@ -235,6 +240,9 @@ def create_app() -> FastAPI:
         try:
             result = answerer(request.question, request.mode)
             return flag_for_review(to_response(result, request.mode, request_id), queue)
+        except NotRecordedError as err:
+            # Replay mode (DEMO_REPLAY=1) only: the question isn't one of the recorded ones.
+            return _fail(404, str(err), request_id)
         except (AzureError, OpenAIError):
             logger.exception("Request %s: Azure call failed", request_id)
             return _fail(502, "An Azure service call failed.", request_id)

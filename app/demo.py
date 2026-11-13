@@ -1,6 +1,7 @@
 """Streamlit demo: ask a DMRB question, see the cited answer, its checks and what the agent did.
 
     uv run streamlit run app/demo.py
+    DEMO_REPLAY=1 uv run streamlit run app/demo.py    # recorded answers, no Azure needed
 
 Uses the same engine and response shape as the REST API (agent/engine.py, app/api.py), so
 what the demo shows is what the service returns. The last answer is kept in session state,
@@ -27,6 +28,7 @@ from openai import OpenAIError
 from agent import engine as engine_module
 from agent.engine import Mode
 from agent.rag import RagError
+from agent.replay import NotRecordedError, ReplayAnswerer, ReplayError
 from agent.trace import TRACE_DIR
 from app import review_tab
 from app.api import AskResponse, flag_for_review, to_response
@@ -49,7 +51,7 @@ BANNERS = {"success": st.success, "info": st.info, "warning": st.warning, "error
 @st.cache_resource(show_spinner="Connecting to Azure...")
 def engine():
     # Looked up on the module at call time, so tests can swap in a fake engine.
-    return engine_module.build_live_answerer()
+    return engine_module.build_answerer()
 
 
 def _use_example() -> None:
@@ -60,7 +62,9 @@ def _use_example() -> None:
 def _ask(question: str, mode: Mode) -> AskResponse | None:
     try:
         result = engine()(question, mode)
-    except (SettingsError, RagError) as err:
+    except NotRecordedError as err:
+        st.info(f"{err} Pick one from the list above.")
+    except (SettingsError, RagError, ReplayError) as err:
         st.error(f"The assistant isn't configured: {err}")  # actionable, holds no secrets
     except (AzureError, OpenAIError) as err:
         logger.exception("Demo: Azure call failed")
@@ -71,6 +75,20 @@ def _ask(question: str, mode: Mode) -> AskResponse | None:
     else:
         return flag_for_review(to_response(result, mode, uuid.uuid4().hex[:12]), get_queue())
     return None
+
+
+def _replay_notice() -> None:
+    try:
+        recorded = engine()
+    except ReplayError as err:
+        st.error(str(err))
+        return
+    if isinstance(recorded, ReplayAnswerer):
+        st.info(
+            f"**Recorded demo.** No Azure connection: the example questions replay real "
+            f"answers recorded on {recorded.recorded_on:%d %b %Y} from {recorded.model}. "
+            "Other questions need the live setup (README)."
+        )
 
 
 def _show(response: AskResponse) -> None:
@@ -111,6 +129,8 @@ with st.sidebar:
         "Indexed: CD 109 (link design), CD 123 (junctions), CG 501 (drainage), GG 101. "
         "Citations are checked in code; numbers come from calculation tools, never the model."
     )
+    if engine_module.replay_enabled():
+        _replay_notice()
     st.divider()
     st.caption("Decision support only; confirm against the current standard.")
 
