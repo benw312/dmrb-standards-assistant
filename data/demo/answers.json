@@ -1,0 +1,773 @@
+{
+ "recorded_on": "2026-11-13",
+ "model": "gpt-5.4-mini",
+ "recordings": [
+  {
+   "question": "Can I use a 5% gradient on a motorway?",
+   "mode": "agent",
+   "result": {
+    "question": "Can I use a 5% gradient on a motorway?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says the longitudinal gradient for a motorway link shall not exceed the permitted relaxation value, and Table 5.1 gives that motorway limit as 4% [CD 109 cl. 5.1; CD 109 Table 5.1]. So a 5% longitudinal gradient on a motorway would not meet the standard and would need a Departure from Standard [CD 109 cl. 5.1; CD 109 Table 5.1]. This is a shall requirement [CD 109 cl. 5.1]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-5.1",
+      "CD109-Table-5.1"
+     ],
+     "requirement_type": "shall",
+     "is_departure": true,
+     "confidence": "high",
+     "needs_human_review": true
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-E/1.10",
+     "CD109-E/3.10",
+     "CD109-E/1.3",
+     "CD109-E/1.8.1",
+     "CD109-5.1",
+     "CD109-E/1.4",
+     "CD109-Table-5.1",
+     "CD109-E/1.6",
+     "CD109-5.1.1",
+     "CD109-E/1.8"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "motorway gradient 5% shall maximum longitudinal gradient CD 109",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 3.626
+     },
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "longitudinal gradient maximum motorway 5% CD 109 table",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 0.553
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 9482,
+    "output_tokens": 265,
+    "seconds": 16.36,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "Can I use a 5% gradient on a motorway?",
+   "mode": "graph",
+   "result": {
+    "question": "Can I use a 5% gradient on a motorway?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says motorway longitudinal gradients “shall not exceed the permitted relaxation values given in Table 5.1” [CD 109 cl. 5.1]. Table 5.1 gives motorways a permitted relaxation of 4%, so a 5% gradient is not permitted under the clauses I found [CD 109 Table 5.1]. That would need a Departure from Standard and should be reviewed [CD 109 cl. 5.1]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-5.1",
+      "CD109-Table-5.1"
+     ],
+     "requirement_type": "shall",
+     "is_departure": true,
+     "confidence": "high",
+     "needs_human_review": true
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-E/1.10",
+     "CD109-E/3.10",
+     "CD109-E/1.3",
+     "CD109-E/1.8.1",
+     "CD109-5.1",
+     "CD109-E/1.4",
+     "CD109-Table-5.1",
+     "CD109-E/1.6",
+     "CD109-5.1.1"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "motorway gradient 5% shall maximum longitudinal gradient CD 109",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 0.639
+     },
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "longitudinal gradient motorway 5% CD 109 table maximum gradient",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 0.505
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 9507,
+    "output_tokens": 250,
+    "seconds": 6.45,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "Can I use a 5% gradient on a motorway?",
+   "mode": "rag",
+   "result": {
+    "question": "Can I use a 5% gradient on a motorway?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says the desirable maximum gradient for motorways is 3%, with a permitted relaxation to 4% [CD 109 Table 5.1]. A 5% gradient on a motorway is therefore not permitted by the indexed clause set and would need a Departure from Standard if you want to use it [CD 109 Table 5.1].",
+     "citations": [
+      "CD109-Table-5.1"
+     ],
+     "requirement_type": "shall",
+     "is_departure": true,
+     "confidence": "high",
+     "needs_human_review": true
+    },
+    "retrieved": [
+     "CD109-E/1.10",
+     "CD109-5.2.2",
+     "CD109-E/3.10",
+     "CG501-7.4.1",
+     "CD109-5.2",
+     "CD109-5.4",
+     "CD109-5.5",
+     "CD109-Table-5.1"
+    ],
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "attempts": 1,
+    "escalation": [],
+    "input_tokens": 2788,
+    "output_tokens": 123,
+    "seconds": 2.43
+   }
+  },
+  {
+   "question": "What superelevation do I need for a 510 m radius curve at 100 kph on a rural road?",
+   "mode": "agent",
+   "result": {
+    "question": "What superelevation do I need for a 510 m radius curve at 100 kph on a rural road?",
+    "answer": {
+     "answer": "CD 109 Revision 1 gives a rural superelevation of 6.93% for a 510 m radius curve at 100 kph, based on Equation 4.2 and the 100 kph design speed [CD 109 cl. 4.2; CD 109 Table 2.10; CD 109 cl. 4.3]. This is the required crossfall value for the curve [CD 109 cl. 4.2]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-4.2",
+      "CD109-Table-2.10",
+      "CD109-4.3"
+     ],
+     "requirement_type": "shall",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-4.2",
+     "CD109-Table-2.10",
+     "CD109-4.3"
+    ],
+    "tool_calls": [
+     {
+      "name": "superelevation",
+      "arguments": {
+       "design_speed_kph": 100,
+       "radius_m": 510,
+       "area": "rural"
+      },
+      "ok": true,
+      "seconds": 0.0
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 7552,
+    "output_tokens": 199,
+    "seconds": 4.07,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "What superelevation do I need for a 510 m radius curve at 100 kph on a rural road?",
+   "mode": "graph",
+   "result": {
+    "question": "What superelevation do I need for a 510 m radius curve at 100 kph on a rural road?",
+    "answer": {
+     "answer": "CD 109 Revision 1 gives a required superelevation of 6.93% for a 510 m radius curve at 100 kph on a rural road, based on Equation 4.2 and the rural cap in cl. 4.3 [CD 109 cl. 4.2; CD 109 cl. 4.3; CD 109 Table 2.10]. This is a “shall” requirement in the standard’s applied value, so you should use that value unless a permitted exception applies [CD 109 cl. 4.3]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-4.2",
+      "CD109-4.3",
+      "CD109-Table-2.10"
+     ],
+     "requirement_type": "shall",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-4.2",
+     "CD109-Table-2.10",
+     "CD109-4.3"
+    ],
+    "tool_calls": [
+     {
+      "name": "superelevation",
+      "arguments": {
+       "design_speed_kph": 100,
+       "radius_m": 510,
+       "area": "rural"
+      },
+      "ok": true,
+      "seconds": 0.0
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 7552,
+    "output_tokens": 221,
+    "seconds": 4.43,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "What superelevation do I need for a 510 m radius curve at 100 kph on a rural road?",
+   "mode": "rag",
+   "result": {
+    "question": "What superelevation do I need for a 510 m radius curve at 100 kph on a rural road?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says you need 5% superelevation for a 510 m radius curve at 100 kph on a rural road. For curves with radii less than those shown in Table 2.10 for \"Minimum R with superelevation of 2.5%\" (V2/R > 7), superelevation shall be provided in accordance with Equation 4.2 [CD 109 cl. 4.2]. Table 2.10 shows that at 100 kph the minimum R with superelevation of 2.5% is 1440 m and that 510 m is the \"Desirable minimum R (superelevation 5%)\" [CD 109 Table 2.10]. For rural areas, superelevation shall not exceed 7% except on existing roads or connector road loops [CD 109 cl. 4.3]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-4.2",
+      "CD109-Table-2.10",
+      "CD109-4.3"
+     ],
+     "requirement_type": "shall",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "retrieved": [
+     "CD109-4.2",
+     "CD109-4.3",
+     "CD109-Table-2.10",
+     "CD109-4.1",
+     "CD109-E/1.4",
+     "CD109-4.1.1",
+     "CD109-9.24.3",
+     "CD109-4.8"
+    ],
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "attempts": 1,
+    "escalation": [],
+    "input_tokens": 3141,
+    "output_tokens": 257,
+    "seconds": 3.55
+   }
+  },
+  {
+   "question": "If a route has an AADT of 30,000, is it suitable for a WS2+1 road?",
+   "mode": "agent",
+   "result": {
+    "question": "If a route has an AADT of 30,000, is it suitable for a WS2+1 road?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says WS2+1 roads \"should only be used for routes with a traffic flow of up to 25,000 vehicles annual average daily traffic (AADT)\" [CD 109 cl. 6.1.1]. An AADT of 30,000 is above that advised upper level, so it is not suitable as a WS2+1 road unless the design team can justify a departure or alternative standard solution [CD 109 cl. 6.1.1]. This is a should-level criterion, so it is not an automatic Departure from Standard, but it does need recorded justification and engineer review [CD 109 cl. 6.1.1]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-6.1.1"
+     ],
+     "requirement_type": "should",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": true
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-6.1.1",
+     "CD109-6.13",
+     "CD109-6.1.2",
+     "CD109-9.19",
+     "CD109-Glossary",
+     "CD109-6.1",
+     "CD109-9.20",
+     "CD109-Table-2.3",
+     "CD109-2.3"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "WS2+1 AADT 30000 suitable traffic flow limit should shall standard",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 0.742
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 9615,
+    "output_tokens": 242,
+    "seconds": 5.18,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "If a route has an AADT of 30,000, is it suitable for a WS2+1 road?",
+   "mode": "graph",
+   "result": {
+    "question": "If a route has an AADT of 30,000, is it suitable for a WS2+1 road?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says WS2+1 roads should only be used for routes with traffic flow up to 25,000 AADT, so an AADT of 30,000 is not suitable under that guidance [CD 109 cl. 6.1.1]. Because this is a “should”, using WS2+1 for 30,000 AADT is not automatically a Departure from Standard, but you would need a recorded justification and it should be reviewed [CD 109 cl. 6.1.1]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-6.1.1"
+     ],
+     "requirement_type": "should",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": true
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-6.1.1",
+     "CD109-Table-2.3",
+     "CD109-6.12.2",
+     "CD109-6.11.1",
+     "CD109-Table-A.1",
+     "CD109-6.11.3",
+     "CD109-9.20",
+     "CD109-6.4",
+     "CD109-2.3"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "WS2+1 AADT 30000 suitable traffic range",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 1.194
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 9788,
+    "output_tokens": 204,
+    "seconds": 7.06,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "If a route has an AADT of 30,000, is it suitable for a WS2+1 road?",
+   "mode": "rag",
+   "result": {
+    "question": "If a route has an AADT of 30,000, is it suitable for a WS2+1 road?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says WS2+1 roads \"should only be used for routes with a traffic flow of up to 25,000 vehicles annual average daily traffic (AADT)\" [CD 109 cl. 6.1.1]. An AADT of 30,000 is above that limit, so the route is not suitable under this guidance and you would need a recorded justification if you still wanted to proceed [CD 109 cl. 6.1.1]. This is a should, not a shall, so it is not a Departure from Standard on the supplied clauses alone [CD 109 cl. 6.1.1]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-6.1.1"
+     ],
+     "requirement_type": "should",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": true
+    },
+    "retrieved": [
+     "CD109-6.1.1",
+     "CD109-Glossary",
+     "CD109-Glossary#2",
+     "CD109-Table-A.1",
+     "CD109-Table-2.3",
+     "CD109-6.1.2",
+     "CD109-9.19",
+     "CD109-6.2"
+    ],
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "attempts": 1,
+    "escalation": [],
+    "input_tokens": 4087,
+    "output_tokens": 192,
+    "seconds": 3.09
+   }
+  },
+  {
+   "question": "Would a 300 mm wide bollard be allowed in the stopping sight visibility envelope?",
+   "mode": "agent",
+   "result": {
+    "question": "Would a 300 mm wide bollard be allowed in the stopping sight visibility envelope?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says the stopping sight visibility envelope shall be free of obstructions by fixed objects, except for a fixed object with a width/length less than or equal to 550 mm [CD 109 cl. 3.4]. A 300 mm wide bollard is therefore allowed, because 300 mm is within that exception [CD 109 cl. 3.4]. This is a shall requirement [CD 109 cl. 3.4]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-3.4"
+     ],
+     "requirement_type": "shall",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-E/1.4",
+     "CD109-E/1.5",
+     "CD109-3.2",
+     "CD109-3.4",
+     "CD109-E/2.3",
+     "CD109-E/1.6",
+     "CD109-Glossary",
+     "CD109-3.4.1"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "stopping sight visibility envelope bollard 300 mm width obstruction envelope CD 109",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 0.487
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 9241,
+    "output_tokens": 193,
+    "seconds": 4.76,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "Would a 300 mm wide bollard be allowed in the stopping sight visibility envelope?",
+   "mode": "graph",
+   "result": {
+    "question": "Would a 300 mm wide bollard be allowed in the stopping sight visibility envelope?",
+    "answer": {
+     "answer": "Yes, if the bollard is a single fixed object and its width is 300 mm, it is allowed in the stopping sight visibility envelope because CD 109 requires the envelope to be free of fixed-object obstructions except for a fixed object with a width/length less than or equal to 550 mm [CD 109 cl. 3.4]. A 300 mm bollard falls within that exception, so it does not need a Departure from Standard on width alone [CD 109 cl. 3.4]. If there is a group of bollards, their combined width/length must be 550 mm or less for the same exception to apply [CD 109 cl. 3.4]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-3.4"
+     ],
+     "requirement_type": "shall",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "CD109-E/1.4",
+     "CD109-E/1.5",
+     "CD109-E/2.3",
+     "CD109-3.2",
+     "CD109-E/1.6",
+     "CD109-3.4",
+     "CD109-Glossary",
+     "CD109-2.9"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "stopping sight visibility envelope bollard width 300 mm allowed obstacle envelope CD 109",
+       "standard": "CD 109"
+      },
+      "ok": true,
+      "seconds": 0.747
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 9310,
+    "output_tokens": 241,
+    "seconds": 5.16,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "Would a 300 mm wide bollard be allowed in the stopping sight visibility envelope?",
+   "mode": "rag",
+   "result": {
+    "question": "Would a 300 mm wide bollard be allowed in the stopping sight visibility envelope?",
+    "answer": {
+     "answer": "CD 109 Revision 1 says a 300 mm wide bollard is allowed in the stopping sight visibility envelope, because the stopping sight visibility envelope shall be free of fixed objects except for a fixed object with a width/length less than or equal to 550 mm. A 300 mm bollard falls within that exception [CD 109 cl. 3.4]. This is a shall requirement, so the envelope must meet it [CD 109 cl. 3.4]. Decision support only; confirm against the current standard.",
+     "citations": [
+      "CD109-3.4"
+     ],
+     "requirement_type": "shall",
+     "is_departure": false,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "retrieved": [
+     "CD109-3.4",
+     "CD109-3.2",
+     "CD123-7.3",
+     "CD109-3.5",
+     "CD109-E/1.4",
+     "CD109-E/1.5",
+     "CD109-2.10",
+     "CD109-E/1.6"
+    ],
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "attempts": 1,
+    "escalation": [],
+    "input_tokens": 2912,
+    "output_tokens": 152,
+    "seconds": 2.4
+   }
+  },
+  {
+   "question": "What's the speed limit on a motorway?",
+   "mode": "agent",
+   "result": {
+    "question": "What's the speed limit on a motorway?",
+    "answer": {
+     "answer": "The indexed standards do not cover the legal speed limit on a motorway. Speed limits are not set by the DMRB, so you need the legislation and any traffic regulation order or equivalent local legal instrument. Decision support only; confirm against the current standard.",
+     "citations": [],
+     "requirement_type": "not_covered",
+     "is_departure": null,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "GG101-2.1",
+     "GG101-2.1.1",
+     "GG101-Glossary",
+     "GG101-2.11",
+     "GG101-1.2.2",
+     "GG101-1.2.1",
+     "GG101-1.2",
+     "GG101-1.6"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "speed limit motorway",
+       "standard": "GG 101"
+      },
+      "ok": true,
+      "seconds": 0.456
+     }
+    ],
+    "steps": 3,
+    "escalation": [],
+    "input_tokens": 14093,
+    "output_tokens": 247,
+    "seconds": 6.02,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "What's the speed limit on a motorway?",
+   "mode": "graph",
+   "result": {
+    "question": "What's the speed limit on a motorway?",
+    "answer": {
+     "answer": "The indexed standards do not cover the motorway speed limit. The speed limit on a motorway is set by legislation and any applicable traffic regulation orders, not by the DMRB. Decision support only; confirm against the current standard.",
+     "citations": [],
+     "requirement_type": "not_covered",
+     "is_departure": null,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "evidence": [
+     "GG101-2.1",
+     "GG101-Glossary",
+     "GG101-2.1.1",
+     "GG101-2.11",
+     "GG101-1.2.2",
+     "GG101-1.2.1",
+     "GG101-1.2",
+     "GG101-1.6"
+    ],
+    "tool_calls": [
+     {
+      "name": "search_standards",
+      "arguments": {
+       "query": "motorway speed limit",
+       "standard": "GG 101"
+      },
+      "ok": true,
+      "seconds": 0.666
+     }
+    ],
+    "steps": 2,
+    "escalation": [],
+    "input_tokens": 8815,
+    "output_tokens": 114,
+    "seconds": 4.25,
+    "trace_id": ""
+   }
+  },
+  {
+   "question": "What's the speed limit on a motorway?",
+   "mode": "rag",
+   "result": {
+    "question": "What's the speed limit on a motorway?",
+    "answer": {
+     "answer": "The indexed standards do not cover the speed limit on a motorway. Decision support only; confirm against the current standard.",
+     "citations": [],
+     "requirement_type": "not_covered",
+     "is_departure": null,
+     "confidence": "high",
+     "needs_human_review": false
+    },
+    "retrieved": [
+     "CD123-2.4",
+     "CD109-2.5",
+     "CD109-Table-2.5",
+     "CD123-2.27",
+     "CD109-2.10",
+     "CD109-E/1.3",
+     "GG101-2.1",
+     "CD109-Table-2.3"
+    ],
+    "check": {
+     "invalid": [],
+     "malformed": [],
+     "unbracketed": [],
+     "not_retrieved": [],
+     "missing_from_list": [],
+     "missing_from_text": [],
+     "uncited": false,
+     "refusal_cites": false
+    },
+    "attempts": 2,
+    "escalation": [],
+    "input_tokens": 6591,
+    "output_tokens": 218,
+    "seconds": 4.3
+   }
+  }
+ ]
+}

@@ -519,3 +519,23 @@ guessing. Each rule cites its GG 101 source.
 - **No authentication:** the reviewer's name is taken on trust, like the rest of the local
   API. A shared deployment would sign reviewers in and check their role.
 - **Tests never touch the real queue:** `tests/conftest.py` gives every test a temp file.
+
+## 2026-11-13: recorded-answers mode (`agent/replay.py`)
+
+- **Why:** the project isn't hosted, and running it needs an Azure subscription, an index and
+  the PDFs. With `DEMO_REPLAY=1` the demo and the REST API replay answers recorded from the
+  live system, so anyone who clones the repo can see it work.
+- **Real runs, stored whole:** `app/record_demo.py` asks the five example questions in all
+  three pipelines and saves each full result. Replay returns them through the same engine
+  interface, so the response shape, banners and review queue behave as they do live.
+- **Never the nearest match:** a question that wasn't recorded is refused (the demo says
+  so; the API returns 404). A replayed answer to a different question would be a wrong
+  answer with real citations on it.
+- **Not edited:** the recording includes a wrong answer from the RAG baseline (5%
+  superelevation where Equation 4.2 gives 6.93%). It's kept because it shows what the agent's
+  calculation tools are for.
+- **Goes stale:** the file records its date and model, the demo shows both, and a test fails
+  if an example question has no recording. Re-record after a re-index or prompt change.
+- **Licence:** the file quotes short, cited extracts of the DMRB (OGL v3.0), like the test
+  fixtures.
+- **Evals and MCP stay live only:** a score from replayed answers would mean nothing.
