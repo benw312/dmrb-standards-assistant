@@ -48,7 +48,7 @@ MODES: dict[str, Mode] = {
 BANNERS = {"success": st.success, "info": st.info, "warning": st.warning, "error": st.error}
 
 
-@st.cache_resource(show_spinner="Connecting to Azure...")
+@st.cache_resource(show_spinner="Starting the assistant...")
 def engine():
     # Looked up on the module at call time, so tests can swap in a fake engine.
     return engine_module.build_answerer()

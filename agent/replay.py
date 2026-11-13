@@ -85,7 +85,9 @@ class ReplayAnswerer:
 
     def __call__(self, question: str, mode: Mode) -> AgentResult | RagResult:
         try:
-            return self._results[(_key(question), mode)]
+            # A copy: results hold plain dicts (tool calls), and one caller changing one
+            # must not change what every later replay returns.
+            return self._results[(_key(question), mode)].model_copy(deep=True)
         except KeyError:
             raise NotRecordedError(
                 "This is the recorded demo: it only has answers for the example questions."

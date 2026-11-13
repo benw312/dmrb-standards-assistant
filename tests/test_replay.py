@@ -220,3 +220,9 @@ def test_the_committed_recording_answers_every_example_in_every_pipeline():
     for question in EXAMPLES:
         for mode in MODES:
             assert replay(question, mode).question == question
+
+
+def test_changing_a_replayed_result_does_not_change_the_recording():
+    replay = ReplayAnswerer(_recorded())
+    replay(QUESTION, "agent").tool_calls[0]["name"] = "tampered"
+    assert replay(QUESTION, "agent").tool_calls[0]["name"] == "search_standards"
