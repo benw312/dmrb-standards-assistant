@@ -5,7 +5,9 @@
 One endpoint does the work: POST /ask with {"question": ..., "mode": "agent" | "graph" | "rag"}.
 The response carries the answer (disclaimer included), its citations in display form,
 requirement strength, the departure and review flags, why it escalated if it did, and cost.
-A flagged answer is still a 200: needing an engineer is a result, not an error.
+A flagged answer is still a 200: needing an engineer is a result, not an error. It is
+also put on the review queue (review/queue.py) and the response carries its `review_id`;
+GET /reviews and POST /reviews/{id}/verdict are in app/review_api.py.
 
 Errors: 422 bad request; 503 the service isn't configured (settings or system prompt
 missing); 502 an Azure call failed; 500 anything else. Error bodies carry only a request ID,
@@ -15,7 +17,8 @@ The answer engine is a FastAPI dependency, built once from the live Azure client
 first request. Tests replace it with a fake, so the API is tested without Azure.
 
 Not here, and handled in front of the service in production (docs/ARCHITECTURE.md):
-authentication, rate limiting and quotas (Azure API Management).
+authentication, rate limiting and quotas (Azure API Management). That includes who may
+record a verdict: this service takes the reviewer's name on trust.
 """
 
 import logging
@@ -34,8 +37,11 @@ from agent.answer import Confidence, RequirementType
 from agent.citations import CitationError, display_citation
 from agent.engine import Answerer, Mode, build_live_answerer
 from agent.loop import AgentResult
-from agent.rag import RagError, RagResult, with_disclaimer
+from agent.rag import DISCLAIMER, RagError, RagResult, with_disclaimer
+from app.review_api import get_queue
+from app.review_api import router as review_router
 from core.settings import SettingsError
+from review.queue import Flagged, ReviewError, ReviewQueue
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +88,9 @@ class AskResponse(BaseModel):
     output_tokens: int
     seconds: float
     trace_id: str | None
+    review_id: int | None = Field(
+        default=None, description="Set when the answer was put on the engineer review queue"
+    )
 
 
 class ErrorBody(BaseModel):
@@ -116,6 +125,45 @@ def to_response(result: AgentResult | RagResult, mode: Mode, request_id: str) ->
         seconds=result.seconds,
         trace_id=(result.trace_id or None) if agent else None,
     )
+
+
+def review_reasons(response: AskResponse) -> tuple[str, ...]:
+    """Why an answer needs an engineer: the failed checks, or else the flags that asked."""
+    if response.escalation:
+        return tuple(response.escalation)
+    if not response.needs_human_review:
+        return ()
+    why = ["possible Departure from Standard"] if response.is_departure else []
+    if response.confidence == "low":
+        why.append("low confidence")
+    return tuple(why) or ("the model asked for review",)
+
+
+def flag_for_review(response: AskResponse, queue: ReviewQueue) -> AskResponse:
+    """Put an answer that needs an engineer on the review queue; the copy returned carries
+    its review_id. If the queue can't be written the answer is still returned, flagged as
+    before: losing the queue entry is logged, losing the answer would be worse."""
+    reasons = review_reasons(response)
+    if not reasons:
+        return response
+    flagged = Flagged(
+        request_id=response.request_id,
+        question=response.question,
+        mode=response.mode,
+        answer=response.answer.removesuffix(DISCLAIMER).rstrip(),
+        citations=tuple(c.id for c in response.citations),
+        requirement_type=response.requirement_type,
+        is_departure=response.is_departure,
+        confidence=response.confidence,
+        reasons=reasons,
+        trace_id=response.trace_id,
+    )
+    try:
+        item = queue.add(flagged)
+    except ReviewError:
+        logger.exception("Request %s: couldn't add to the review queue", response.request_id)
+        return response
+    return response.model_copy(update={"review_id": item.id})
 
 
 class LazyAnswerer:
@@ -177,13 +225,16 @@ def create_app() -> FastAPI:
         },
     )
     def ask(
-        request: AskRequest, answerer: Annotated[Answerer, Depends(get_answerer)]
+        request: AskRequest,
+        answerer: Annotated[Answerer, Depends(get_answerer)],
+        queue: Annotated[ReviewQueue, Depends(get_queue)],
     ) -> AskResponse | JSONResponse:
         # A plain `def`, not `async def`: the Azure SDK clients are synchronous, and FastAPI
         # runs sync endpoints in a worker thread so they don't stall the event loop.
         request_id = uuid.uuid4().hex[:12]
         try:
-            return to_response(answerer(request.question, request.mode), request.mode, request_id)
+            result = answerer(request.question, request.mode)
+            return flag_for_review(to_response(result, request.mode, request_id), queue)
         except (AzureError, OpenAIError):
             logger.exception("Request %s: Azure call failed", request_id)
             return _fail(502, "An Azure service call failed.", request_id)
@@ -191,6 +242,7 @@ def create_app() -> FastAPI:
             logger.exception("Request %s: unexpected error", request_id)
             return _fail(500, "Internal error.", request_id)
 
+    app.include_router(review_router)
     return app
 
 

@@ -212,7 +212,9 @@ def _limit_node(state: GraphState) -> GraphState:
 
 def _review_node(state: GraphState) -> GraphState:
     # Reached only when the run escalated. With pause_for_review the graph stops before this
-    # node; resuming runs it and ends. Phase 5 puts the engineer's verdict here.
+    # node; resuming runs it and ends. The review queue (review/queue.py) doesn't need the
+    # pause: it stores the finished, flagged result from any pipeline. The pause is for a
+    # deployment that must withhold the answer until an engineer releases it.
     return {"route": "end"}
 
 

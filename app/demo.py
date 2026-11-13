@@ -5,7 +5,8 @@
 Uses the same engine and response shape as the REST API (agent/engine.py, app/api.py), so
 what the demo shows is what the service returns. The last answer is kept in session state,
 so changing a setting doesn't wipe it; it's always shown with the question and pipeline
-that produced it.
+that produced it. An answer that needs an engineer goes on the review queue, which the
+second tab works through (app/review_tab.py).
 """
 
 import logging
@@ -27,8 +28,10 @@ from agent import engine as engine_module
 from agent.engine import Mode
 from agent.rag import RagError
 from agent.trace import TRACE_DIR
-from app.api import AskResponse, to_response
+from app import review_tab
+from app.api import AskResponse, flag_for_review, to_response
 from app.presentation import EXAMPLES, STRENGTH_LABELS, cost_line, safe_markdown, status
+from app.review_api import get_queue
 from core.settings import SettingsError
 
 logger = logging.getLogger(__name__)
@@ -66,7 +69,7 @@ def _ask(question: str, mode: Mode) -> AskResponse | None:
         logger.exception("Demo question failed")
         st.error(f"Something went wrong ({type(err).__name__}). Check the terminal log.")
     else:
-        return to_response(result, mode, uuid.uuid4().hex[:12])
+        return flag_for_review(to_response(result, mode, uuid.uuid4().hex[:12]), get_queue())
     return None
 
 
@@ -76,6 +79,8 @@ def _show(response: AskResponse) -> None:
     BANNERS[banner.kind](banner.headline)
     for reason in banner.reasons:
         st.caption(f"• {safe_markdown(reason)}")
+    if response.review_id is not None:
+        st.caption(f"On the review queue as #{response.review_id} (Review queue tab).")
 
     if not banner.show_details:
         with st.expander("Unverified model output (not checked; do not rely on it)"):
@@ -112,17 +117,23 @@ with st.sidebar:
 st.title("DMRB Standards Assistant")
 st.write("Ask a highway design question. Every claim cites the clause it comes from.")
 
-st.selectbox("Try an example", ("", *EXAMPLES), key="example", on_change=_use_example)
-question = st.text_area("Question", key="question", max_chars=1000, height=90)
+ask_tab, queue_tab = st.tabs(["Ask", "Review queue"])
 
-# Not disabled while empty: a button that only enables after the text box loses focus
-# swallows the first click.
-if st.button("Ask", type="primary"):
-    if not question.strip():
-        st.warning("Type a question first.")
-    else:
-        with st.spinner("Searching the standards..."):
-            st.session_state.response = _ask(question.strip(), mode)
+with ask_tab:
+    st.selectbox("Try an example", ("", *EXAMPLES), key="example", on_change=_use_example)
+    question = st.text_area("Question", key="question", max_chars=1000, height=90)
 
-if st.session_state.get("response"):
-    _show(st.session_state.response)
+    # Not disabled while empty: a button that only enables after the text box loses focus
+    # swallows the first click.
+    if st.button("Ask", type="primary"):
+        if not question.strip():
+            st.warning("Type a question first.")
+        else:
+            with st.spinner("Searching the standards..."):
+                st.session_state.response = _ask(question.strip(), mode)
+
+    if st.session_state.get("response"):
+        _show(st.session_state.response)
+
+with queue_tab:
+    review_tab.render(get_queue())

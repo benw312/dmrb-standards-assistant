@@ -108,3 +108,12 @@ def test_an_azure_failure_in_a_tool_is_reported_not_raised():
     tools = (Tool("flaky", "a tool whose Azure call fails, for this test only", NoArgs, down),)
     result = _session(lambda c: c.call_tool("flaky", {}), tools=tools)
     assert result.is_error and "ServiceRequestError" in result.content[0].text
+
+
+def test_a_flagged_answer_goes_on_the_review_queue_as_it_does_over_rest(review_queue):
+    ask = FakeAnswerer(_agent_result(escalation=("Stopped at the 6-step limit.",)))
+    result = _session(lambda c: c.call_tool(ASK, {"question": "Max motorway gradient?"}), ask=ask)
+
+    (item,) = review_queue.list("pending")
+    assert json.loads(result.content[0].text)["review_id"] == item.id
+    assert item.flagged.reasons == ("Stopped at the 6-step limit.",)

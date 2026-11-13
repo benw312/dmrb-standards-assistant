@@ -8,6 +8,7 @@ Two kinds of tool:
 
 - `ask_dmrb`: the governed path. Runs the whole agent: citations checked against what was
   retrieved, departures flagged, escalation on a failed check. Use this to answer a question.
+  An answer that needs an engineer goes on the review queue, as it does over REST.
 - The agent's own tools (search_standards, get_clause, the CD 109 equations, check_chart,
   check_limit): for a client building its own workflow. These are the same functions the
   agent calls, with the same argument validation, but the citation gate is the caller's job:
@@ -35,7 +36,8 @@ from agent.engine import Mode
 from agent.loop import AgentResult
 from agent.rag import RagResult
 from agent.tools.registry import Tool, run_tool
-from app.api import to_response
+from app.api import flag_for_review, to_response
+from app.review_api import get_queue
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +99,7 @@ def call_ask(ask: AskFn, arguments: Mapping[str, Any]) -> types.CallToolResult:
     except Exception as err:  # noqa: BLE001 - reported to the client, logged here
         logger.exception("MCP ask_dmrb failed (request %s)", request_id)
         return _text(f"the assistant failed ({type(err).__name__}); request id {request_id}", True)
-    response = to_response(result, args.mode, request_id)
+    response = flag_for_review(to_response(result, args.mode, request_id), get_queue())
     return types.CallToolResult(
         content=[types.TextContent(type="text", text=response.model_dump_json())],
         structured_content=response.model_dump(mode="json"),

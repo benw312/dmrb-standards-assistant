@@ -44,8 +44,13 @@ Draft by Claude, 2026-10-26, for Ben to review and put in his own words.
   the answer suggests a Departure from Standard, confidence is low, a chart reading is within
   its tolerance of the line, chart data hasn't been checked by an engineer, or the agent hits its
   step or time limit. Escalated answers are shown as "Unverified" with their details hidden.
+- **Review queue:** escalated and flagged answers are stored with the reasons
+  (`review/queue.py`); if the queue can't be written the answer is still returned flagged,
+  and the failure is logged. An engineer records one verdict per answer, approved or corrected; it
+  can't be overwritten, so the queue is the audit trail. Verdicts become candidate test cases.
+  The prototype takes the reviewer's name on trust; a deployment would authenticate them.
 - **Pause for review:** the LangGraph version can stop before the answer is released and resume
-  after an engineer has looked (`agent/graph.py`). A review queue is Phase 5.
+  after an engineer has looked (`agent/graph.py`).
 - **Ground truth is human-written:** retrieval questions, golden answers, chart checks and
   tolerances are written or confirmed by the engineer, not generated (`CLAUDE.md` rules). Where
   Claude has drafted one to unblock work it is marked `CLAUDE DRAFT` and listed for review in
@@ -101,7 +106,7 @@ The [AI Playbook for the UK Government](https://www.gov.uk/government/publicatio
 | Know what AI is and its limitations | The model reads and words; code retrieves, calculates and checks. Known failure modes are listed in `docs/ARCHITECTURE.md` with the control for each |
 | Use AI lawfully, ethically and responsibly | Crown copyright respected (OGL attribution, no redistribution); no personal data |
 | Use AI securely | Keyless auth, read-only tools, input validation at every boundary, fenced document text |
-| Meaningful human control at the right stages | Escalation rules above; pause-for-review in the graph; engineer-owned ground truth |
+| Meaningful human control at the right stages | Escalation rules above; a review queue with recorded verdicts; pause-for-review in the graph; engineer-owned ground truth |
 | Manage the full lifecycle | Currency check, versioned sources, eval harness, traces for every run |
 | Use the right tool for the job | Search and coded equations wherever they suffice; a model only where language is involved; a RAG baseline kept to show the agent earns its cost |
 | Be open and collaborative | Public repo, decisions log, this record |
