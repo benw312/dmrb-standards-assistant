@@ -14,6 +14,7 @@ The only prefill is from your own retrieval questions (evals/retrieval.yaml).
 The logic is in evals/golden_write.py; this file is the page.
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -64,8 +65,13 @@ def _cite(chunk_id: str) -> str:
 
 
 def _plain(text: str) -> str:
-    """Clause text as text: no markdown tables or LaTeX from a '|' or '$' in the standard."""
+    """Text from the standard or the form, shown as text: '$' would start LaTeX."""
     return text.replace("$", r"\$")
+
+
+def _label(text: str) -> str:
+    """For widget labels, which render markdown: a heading's '*' or '_' stays a character."""
+    return re.sub(r"([\\`*_\[\]$])", r"\\\1", text)
 
 
 # --- callbacks: the one place Streamlit lets code set a widget's value -------------------
@@ -178,7 +184,8 @@ def _finder(all_chunks: list[Chunk]) -> None:
         st.caption("Nothing found. Every word must appear in the clause; try fewer words.")
     for hit in hits:
         strength = (hit.requirement_type or hit.kind).upper()
-        title = f"{_cite(hit.citation_id)} · {strength} · {hit.heading_path} (p. {hit.page})"
+        heading = _label(hit.heading_path)
+        title = f"{_cite(hit.citation_id)} · {strength} · {heading} (p. {hit.page})"
         with st.expander(title):
             st.text(hit.text)
             st.button(

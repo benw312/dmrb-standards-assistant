@@ -227,3 +227,10 @@ def test_questions_so_far_are_listed(editor, golden_file):
     text = _text(editor())
     assert "`G01` departure: Can I use a 5% gradient on a motorway?" in text
     assert "`G02` out of scope" in text
+
+
+def test_markdown_characters_in_a_heading_stay_characters(editor):
+    odd = CHUNKS[0].model_copy(update={"heading_path": "5. Costs in $ > *Gradients* [draft]_x_"})
+    at = editor(chunks=[odd])
+    at.text_input(key="find").input("CD 109 cl. 5.1").run()
+    assert r"5. Costs in \$ > \*Gradients\* \[draft\]\_x\_ (p. 25)" in at.expander[0].label

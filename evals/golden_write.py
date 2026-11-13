@@ -5,13 +5,16 @@ typing: it formats a question in the file's layout, checks it, and appends it. I
 calls a model and never suggests an answer, a strength or a departure flag, because ground
 truth drafted by the system under test would only measure the system against itself.
 
-Appending is all it does to the file: existing text, comments included, is never rewritten.
-The new file is built beside the old one, read back with the real loader, and swapped in
-only if every earlier question is unchanged and the new one reads back exactly as entered.
+Appending is all it does to the file: the bytes already there, comments and line endings
+included, are never rewritten. The new file is built beside the old one, read back with the
+real loader, and swapped in only if every earlier question is unchanged and the new one reads
+back exactly as entered.
 """
 
 import os
 import re
+import shutil
+import tempfile
 from collections import Counter
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -58,6 +61,11 @@ def next_id(questions: Iterable[GoldenQuestion]) -> str:
     return f"{ID_PREFIX}{max(used, default=0) + 1:02d}"
 
 
+# Ids like G01 are written bare, as in the file's examples. Anything else is quoted: YAML
+# reads a bare `no`, `1` or `null` as something other than text.
+_PLAIN_ID = re.compile(r"[A-Za-z]+\d+")
+
+
 def _quoted(text: str) -> str:
     # PyYAML does the escaping, so quotes, colons, # and odd characters can't break the file.
     return yaml.safe_dump(text, default_style='"', allow_unicode=True, width=float("inf")).strip()
@@ -70,7 +78,7 @@ def _cite(chunk_id: str) -> str:
 def format_block(question: GoldenQuestion) -> str:
     """The question as a block in golden.yaml's layout (same field order as its examples)."""
     lines = [
-        f"- id: {_quoted(question.id) if not question.id.isalnum() else question.id}",
+        f"- id: {question.id if _PLAIN_ID.fullmatch(question.id) else _quoted(question.id)}",
         f"  query: {_quoted(question.query)}",
         f"  type: {question.type}",
     ]
@@ -108,15 +116,42 @@ def problems(
 
 
 def append_question(path: Path, question: GoldenQuestion) -> None:
-    """Add the question to the end of the file, or raise GoldenError and change nothing."""
+    """Add the question to the end of the file, or raise GoldenError and change nothing.
+
+    Works on the file's bytes, so what was there before is the exact start of what is there
+    after: line endings (a file saved on Windows), a byte-order mark and trailing blank lines
+    all stay as they were."""
+    path = path.resolve()  # a symlinked file is updated where it really lives
     before = load_or_empty(path)
-    text = path.read_text(encoding="utf-8")
-    draft = path.with_name(path.name + ".tmp")
     try:
-        draft.write_text(text.rstrip("\n") + "\n\n" + format_block(question), encoding="utf-8")
-        after = load_golden(draft)
+        original = path.read_bytes()
+        if not os.access(path, os.W_OK):
+            raise GoldenError(f"{path.name} is read-only; nothing was saved")
+        newline = "\r\n" if b"\r\n" in original else "\n"
+        gap = newline if original.endswith((b"\n", b"\r")) else newline * 2
+        block = (gap + format_block(question).replace("\n", newline)).encode("utf-8")
+        # A name of its own, so two saves at once can't write over each other's draft.
+        with tempfile.NamedTemporaryFile(
+            dir=path.parent, prefix=path.name + ".", suffix=".tmp", delete=False
+        ) as handle:
+            draft = Path(handle.name)
+            handle.write(original + block)
+    except OSError as err:
+        raise GoldenError(f"couldn't write {path.name}: {err}") from err
+    try:
+        shutil.copymode(path, draft)
+        try:
+            after = load_golden(draft)
+        except GoldenError as err:
+            # The loader names the draft; the reader only knows golden.yaml.
+            raise GoldenError(
+                f"{question.id} would stop {path.name} loading, so nothing was saved: "
+                + str(err).replace(draft.name, path.name)
+            ) from None
         if after != [*before, question]:
             raise GoldenError(f"{question.id} didn't read back as entered; nothing was saved")
+        if path.read_bytes() != original:
+            raise GoldenError(f"{path.name} changed while saving; nothing was saved, try again")
         os.replace(draft, path)  # one step: the file is the old one or the new one, never half
     except OSError as err:
         raise GoldenError(f"couldn't write {path.name}: {err}") from err

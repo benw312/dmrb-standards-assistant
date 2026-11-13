@@ -256,3 +256,87 @@ def test_a_glossary_ranks_last_and_repetition_doesnt_outrank_a_heading_match():
     wordy = chunk("CD109-8.7", "gradient " * 50, heading_path="8. Climbing lanes")
     hits = search_chunks([glossary, wordy, CHUNKS[1]], "gradient")
     assert [c.citation_id for c in hits] == ["CD109-5.1.1", "CD109-8.7", "CD109-Glossary"]
+
+
+@pytest.mark.parametrize(
+    "existing",
+    [
+        TEMPLATE.replace("\n", "\r\n"),  # saved on Windows
+        "﻿" + TEMPLATE,  # a byte-order mark
+        TEMPLATE.rstrip("\n"),  # no final newline
+        TEMPLATE + "\n\n   \n",  # trailing blank lines and spaces
+        TEMPLATE + '- id: G00\r\n  query: "Mixed endings?"\r\n  type: out_of_scope\n',
+    ],
+)
+def test_the_bytes_already_in_the_file_are_never_changed(golden, existing):
+    golden.write_bytes(existing.encode("utf-8"))
+    before = golden.read_bytes()
+
+    append_question(golden, question())
+
+    after = golden.read_bytes()
+    assert after.startswith(before) and len(after) > len(before)
+    assert load_golden(golden)[-1] == question()
+    if b"\r\n" in before:  # the new block follows the file's own line endings
+        assert b"\n" not in after[len(before) :].replace(b"\r\n", b"")
+
+
+def test_a_symlinked_file_is_updated_where_it_really_lives(tmp_path, golden):
+    link = tmp_path / "links" / "golden.yaml"
+    link.parent.mkdir()
+    link.symlink_to(golden)
+
+    append_question(link, question())
+
+    assert link.is_symlink() and load_golden(golden) == [question()]
+    assert not list(link.parent.glob("*.tmp")) and not list(golden.parent.glob("*.tmp"))
+
+
+def test_a_read_only_file_is_left_alone(golden):
+    golden.chmod(0o444)
+    try:
+        with pytest.raises(GoldenError, match="read-only"):
+            append_question(golden, question())
+        assert golden.read_text() == TEMPLATE
+    finally:
+        golden.chmod(0o644)
+
+
+def test_the_files_permissions_are_kept(golden):
+    golden.chmod(0o600)
+    append_question(golden, question())
+    assert golden.stat().st_mode & 0o777 == 0o600
+
+
+@pytest.mark.parametrize("odd_id", ["no", "1", "null", "0x1F", "G01:", "#x", "G-1", "Q 7"])
+def test_an_id_yaml_would_misread_is_quoted_and_reads_back(golden, odd_id):
+    q = question(id=odd_id)
+    assert f'- id: "{odd_id}"' in format_block(q)
+    append_question(golden, q)
+    assert load_golden(golden) == [q]
+
+
+def test_an_error_names_the_real_file_not_the_draft(golden):
+    golden.write_text(TEMPLATE + "notes: |+\n  keeps trailing lines\n")
+    saved = golden.read_bytes()
+    with pytest.raises(GoldenError) as err:
+        append_question(golden, question())
+    assert ".tmp" not in str(err.value) and "golden.yaml" in str(err.value)
+    assert golden.read_bytes() == saved and not list(golden.parent.glob("*.tmp"))
+
+
+def test_a_file_changed_during_the_save_is_not_overwritten(golden, monkeypatch):
+    import evals.golden_write as golden_write
+
+    real_load = golden_write.load_golden
+
+    def load_then_edit(path):
+        result = real_load(path)
+        if path != golden:  # the draft has just been checked: someone edits the real file
+            golden.write_text(TEMPLATE + "# a note added by hand meanwhile\n")
+        return result
+
+    monkeypatch.setattr(golden_write, "load_golden", load_then_edit)
+    with pytest.raises(GoldenError, match="changed while saving"):
+        append_question(golden, question())
+    assert golden.read_text().endswith("# a note added by hand meanwhile\n")
