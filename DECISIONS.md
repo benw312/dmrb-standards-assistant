@@ -426,3 +426,71 @@ guessing. Each rule cites its GG 101 source.
 - **Model text is sanitised before rendering:** no markdown images (the browser would fetch
   the URL) and `$` shown literally, not as LaTeX.
 - **Tested headless** with Streamlit's AppTest and a fake engine, so the page logic runs in CI.
+
+## 2026-10-26: demo adds the repo root to the import path
+
+- **Problem:** `streamlit run app/demo.py` puts `app/` on the import path, not the repo root,
+  so `agent` and `core` didn't import. AppTest and pytest hid it (pytest adds the root).
+- **Fix:** `app/demo.py` inserts the root before its imports; ruff's E402 is off for that file
+  only. A test runs the page as a plain script from a temp folder, which is how Streamlit
+  loads it.
+- **Not chosen:** making the project an installable package (`[build-system]` + package list).
+  It's the standard fix but adds a build backend and generic top-level names (`app`, `core`)
+  in site-packages, for one entry point. Revisit if a second script needs the same fix.
+
+## 2026-10-26: source links from the DMRB site's API, and a weekly currency check
+
+- **Links:** `url` in `data/sources.yaml` is each document's page on standardsforhighways.co.uk
+  (`/search/<nodeId>`), which shows its versions and any withdrawal; `pdf_url` downloads the
+  PDF. Found through the API the site's own pages call (`/tses/v2/search`). Each download
+  matched the local PDF page for page; only the "Downloaded on" margin stamp differs.
+- **Chunk links** still append `#page=N`. The PDF is served as a download, so no link can
+  open a page directly; the page number is kept for the reader. They update on the next
+  `ingest.chunk` + index rebuild.
+- **Currency check:** `uv run python -m ingest.currency` asks the site whether each indexed
+  version is still the latest and not withdrawn; exit 1 if not. A weekly GitHub Action runs
+  it. Citing a superseded standard is worse than refusing, so this fails loudly.
+- **Trade-off:** the API isn't published or versioned. A change to it makes the check error
+  (exit 2), never report "all current".
+
+## 2026-10-26: MCP server (`app/mcp_server.py`)
+
+- **Why:** MCP is how agents and assistants plug in other tools (Claude Desktop, Copilot
+  Studio, watsonx Orchestrate). Serving the assistant over MCP as well as REST shows it as a
+  component other AI systems can use, not only an app.
+- **Two kinds of tool:** `ask_dmrb` runs the whole agent, with the citation gate, departure
+  flag and escalation, and is the one to use for answers. The agent's own tools are exposed
+  with `--with-tools`, for clients composing their own workflow. Their results aren't checked
+  answers, so they're opt-in and each description starts by saying so.
+- **Bounded:** at most 4 calls run at once (an `ask_dmrb` call is several model calls); the
+  agent's step and time limits bound each one.
+- **One engine:** `agent/engine.py` now returns the answerer and the tools built on the same
+  clients (`build_live_engine`), so REST, UI and MCP can't drift apart.
+- **Low-level server, not the decorator API:** the tools already have Pydantic schemas in the
+  registry, so they're listed as-is rather than re-declared as typed functions.
+- **Sync tools in threads:** each call runs via `anyio.to_thread`, so a slow Azure call
+  doesn't block the server.
+- **Checked live:** over stdio, `ask_dmrb` answered the superelevation question (6.93%, three
+  checked citations, 5.9 s).
+
+## 2026-10-26: charts are machine-read, then checked by an engineer
+
+- **Why not digitise by hand:** the CG 501 charts plot solid markers on a regular grid, so the
+  values can be read from pixels more precisely than by clicking (`ingest/digitise.py`; method
+  in `docs/CHARTS.md`). The engineer's job becomes checking an overlay, not reading 23 points.
+- **Read the line, not the marker:** the data point is where the plotted line passes the
+  marker. A marker's box centre is wrong for triangles (about 0.01 on Fig 7.5.1).
+- **Fail, don't guess:** no line beside a marker, sides that disagree, a marker off its x, or
+  unevenly spaced gridlines stop the run. A plausible wrong number is the failure to avoid.
+- **Drafts stay flagged:** chart YAML is `status: draft` until `checked_by` is filled in, and
+  every `check_chart` result on draft data needs review.
+- **One generic tool:** `check_chart` interpolates any chart file, refuses inputs off the
+  chart (x outside the data, y off the axis: usually a unit slip), and calls results within
+  the reading tolerance "marginal". Adding a chart is a data change.
+- **Dependency:** `pdfplumber` (MIT; brings `pypdfium2`) as a dev dependency, only for reading
+  the images out of the PDFs.
+- **Fig 2.1 has its own reader** (`ingest/digitise_bands.py`): bands, not a value axis, and
+  dashed lines, not markers. Its output is a crossing table (Ac per Lc line per band edge),
+  the form an engineer can check line by line. It's kept out of `check_chart`'s directory
+  (`data/charts/design_speed/`) because it isn't an avoid-the-line chart; the design speed
+  tool that uses it waits on three reading rules from Ben (HANDOVER).

@@ -1,0 +1,152 @@
+# CD109-Figure-2.1: machine-read by ingest/digitise_bands.py. DRAFT until an engineer
+# checks the crossings against the figure and sets status: checked.
+id: CD109-Figure-2.1
+status: draft
+digitised_by: ingest/digitise_bands.py (machine-read 2026-10-26)
+checked_by: null
+source: CD 109
+page: 10
+clauses:
+- CD 109 cl. 2.1
+- CD 109 cl. 2.4
+licence: Contains public sector information licensed under the OGL v3.0
+reads: 'For each Lc line: the band at Ac 0, then the Ac at which the line crosses
+  each band edge going down. ''before 0'': already past it at Ac 0; ''after 20'':
+  not reached on the chart. The design speed is the band whose crossings bracket the
+  Ac. ''above 120A'': the line is above the top of the chart there.'
+bands_top_to_bottom:
+- 120A
+- 120B
+- 100A
+- 100B
+- 85A
+- 85B
+- 70A
+- 70B
+lc_crossings:
+  0:
+    at_ac_0: above 120A
+    into 120A: 7.78
+    into 120B: 16.12
+    into 100A: after 20
+    into 100B: after 20
+    into 85A: after 20
+    into 85B: after 20
+    into 70A: after 20
+    into 70B: after 20
+    out of 70B: after 20
+  5:
+    at_ac_0: above 120A
+    into 120A: 2.81
+    into 120B: 11.5
+    into 100A: 19.15
+    into 100B: after 20
+    into 85A: after 20
+    into 85B: after 20
+    into 70A: after 20
+    into 70B: after 20
+    out of 70B: after 20
+  10:
+    at_ac_0: 120A
+    into 120A: before 0
+    into 120B: 6.77
+    into 100A: 14.4
+    into 100B: after 20
+    into 85A: after 20
+    into 85B: after 20
+    into 70A: after 20
+    into 70B: after 20
+    out of 70B: after 20
+  15:
+    at_ac_0: 120A
+    into 120A: before 0
+    into 120B: 2.04
+    into 100A: 9.69
+    into 100B: 16.68
+    into 85A: after 20
+    into 85B: after 20
+    into 70A: after 20
+    into 70B: after 20
+    out of 70B: after 20
+  20:
+    at_ac_0: 120B
+    into 120A: before 0
+    into 120B: before 0
+    into 100A: 4.87
+    into 100B: 11.86
+    into 85A: 18.18
+    into 85B: after 20
+    into 70A: after 20
+    into 70B: after 20
+    out of 70B: after 20
+  25:
+    at_ac_0: 120B
+    into 120A: before 0
+    into 120B: before 0
+    into 100A: 0.27
+    into 100B: 7.17
+    into 85A: 13.41
+    into 85B: 18.92
+    into 70A: after 20
+    into 70B: after 20
+    out of 70B: after 20
+  30:
+    at_ac_0: 100A
+    into 120A: before 0
+    into 120B: before 0
+    into 100A: before 0
+    into 100B: 2.42
+    into 85A: 8.65
+    into 85B: 14.14
+    into 70A: 19.81
+    into 70B: after 20
+    out of 70B: after 20
+  35:
+    at_ac_0: 100B
+    into 120A: before 0
+    into 120B: before 0
+    into 100A: before 0
+    into 100B: before 0
+    into 85A: 3.93
+    into 85B: 9.39
+    into 70A: 15.04
+    into 70B: after 20
+    out of 70B: after 20
+worked_example:
+  ac: 12
+  lc: 15
+  expected: 100A
+  read: 100A
+lines:
+- lc: 0
+  slope_px: 0.2815
+  intercept_px: 125.42
+  pixels: 190
+- lc: 5
+  slope_px: 0.2704
+  intercept_px: 154.6
+  pixels: 201
+- lc: 10
+  slope_px: 0.2709
+  intercept_px: 179.56
+  pixels: 210
+- lc: 15
+  slope_px: 0.2705
+  intercept_px: 204.67
+  pixels: 270
+- lc: 20
+  slope_px: 0.2706
+  intercept_px: 230.15
+  pixels: 272
+- lc: 25
+  slope_px: 0.2739
+  intercept_px: 254.17
+  pixels: 276
+- lc: 30
+  slope_px: 0.2746
+  intercept_px: 279.53
+  pixels: 267
+- lc: 35
+  slope_px: 0.2759
+  intercept_px: 304.68
+  pixels: 274
