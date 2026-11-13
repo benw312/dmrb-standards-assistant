@@ -12,7 +12,7 @@ Read this first in a new Claude Code session, then `PLAN.md` (checklist) and `DE
 | 2. Index | Done. 657 documents; semantic recall@5 100%, MRR 0.83 on 20 questions (README) |
 | 3. RAG | Done. `agent/rag.py`, 9/10 on the hand check (`evals/rag_check.md`); prompt is a Claude draft |
 | 4. Agent | Built. `agent/loop.py` (11 tools, 6 steps, traces) and `agent/graph.py` (LangGraph, pause-for-review); 9/10 first run (`evals/agent_check.md`). `check_chart` reads CG 501 Fig 7.5.1 / 7.5.4 (machine-read drafts, Ben to check) |
-| 5. Review | Escalation flag only; LangGraph pause is the mechanism for a queue |
+| 5. Review | Built. Flagged answers go to `data/reviews.sqlite` (`review/queue.py`); verdicts in the demo's Review queue tab or `POST /reviews/{id}/verdict`; `review.export` prints golden-set candidates |
 | 6. Eval | Scorer built (`evals/golden.py`); waiting on Ben's `evals/golden.yaml` |
 | 7. Ship | REST API (`app/api.py`), Streamlit demo (`app/demo.py`) and MCP server (`app/mcp_server.py`) built; demo GIF is Ben's |
 
@@ -63,6 +63,7 @@ uv run uvicorn app.api:app                     # REST API, docs at http://127.0.
 uv run python -m evals.golden                  # score rag/agent/graph on evals/golden.yaml
 uv run streamlit run app/demo.py               # demo UI
 uv run python -m app.mcp_server                # MCP server (stdio); --with-tools adds the raw tools
+uv run python -m review.export                 # engineer verdicts -> golden-set candidates (stdout)
 ```
 
 ## Pipeline
@@ -156,6 +157,11 @@ is marked `CLAUDE DRAFT` or `CLAUDE EDIT` in the file itself)
   `traces/` to see how it searches.
 - [x] `.claude/settings.json` deny rules now name `evals/golden.yaml` and
   `evals/retrieval.yaml` (PR #38), so Claude can't edit either ground-truth file.
+- [ ] Review queue (`review/queue.py`, CLAUDE DRAFT of the wording): two verdicts, *approved*
+  (right as given) and *corrected* (wrong; the note says what's right). Enough, or do you
+  want a third, e.g. "right answer, wrong clause"? Try it: ask the demo a departure
+  question, open the Review queue tab, record a verdict, then `uv run python -m review.export`.
+  The queue file is local and git-ignored; `REVIEW_DB` moves it.
 - [ ] Scoring rule to confirm (`evals/scoring.py`): when your golden answer is `departure:
   false`, an answer that doesn't mention a departure (null) counts as correct. Agree?
 - [ ] `agent/graph.py` (LangGraph version) and `docs/ARCHITECTURE.md`: read both so you can

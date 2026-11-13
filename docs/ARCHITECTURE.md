@@ -24,7 +24,8 @@ flowchart TB
         R --> V[Citation gate<br/>citations.py]
         G --> V
         V -->|pass| OK[Cited answer]
-        V -->|fail twice, limit hit,<br/>departure, low confidence| H[Flag for engineer review]
+        V -->|fail twice, limit hit,<br/>departure, low confidence| H[Review queue]
+        H -->|engineer verdict| GC[Golden-set candidate]
     end
     S --- R
     S --- G
@@ -39,6 +40,7 @@ flowchart TB
 | Reason | `agent/rag.py`, `agent/loop.py`, `agent/graph.py` | Structured output (`Answer`): text, citations, requirement strength, departure flag, confidence, review flag |
 | Compute | `agent/tools/equations.py`, `check_limit.py`, `charts.py` | CD 109 equations, limit checks and chart readings (`check_chart`, from `data/charts/`) in exact decimals; the model only supplies inputs |
 | Verify | `agent/citations.py` | Parses every citation in the answer; each must be something a tool returned this run |
+| Review | `review/queue.py`, `review/export.py`, `app/review_api.py`, `app/review_tab.py` | Flagged answers wait in a SQLite queue with the reasons; one verdict each, never overwritten; verdicts export as golden-set candidates |
 | Observe | `agent/trace.py` | One JSONL line per model call, tool call and check |
 | Serve | `app/api.py`, `app/demo.py`, `app/mcp_server.py` | One engine behind REST, a Streamlit UI and an MCP server; MCP's `ask_dmrb` keeps the citation gate, raw tools are building blocks |
 | Evaluate | `evals/` | recall@k / MRR on hand-written questions; hand-judged answer checks; golden set next |
@@ -93,8 +95,10 @@ The prototype runs from a laptop on personal Azure resources. For a client deplo
   OpenTelemetry, with dashboards for escalation rate, tool errors, latency and tokens per question.
 - **Safety:** Azure AI Content Safety on input and output (prompt shields); PII redaction if
   questions can contain project data.
-- **Review loop (Phase 5):** escalated answers go to a queue. LangGraph's checkpointed pause
-  before `review` is the mechanism. Each engineer verdict becomes a golden-set case.
+- **Review loop:** the queue is built (`review/`), on SQLite with the reviewer's name taken
+  on trust. In production it moves to a managed database, reviewers sign in (Entra ID) and
+  the verdict endpoint checks their role. Where an answer must be withheld until approved,
+  LangGraph's checkpointed pause before `review` holds the run and the verdict resumes it.
 - **Content updates:** re-ingest when a standard is revised. Chunks carry the version, so
   answers state it and superseded text can be filtered out.
 - **Scale:** the whole DMRB is several hundred documents. Ingest runs as a batch job; the Search

@@ -24,7 +24,7 @@ flowchart LR
     T --> AIS
     AG --> G{Confident and<br/>no departure?}
     G -->|yes| A[Cited answer]
-    G -->|no| R[Engineer review]
+    G -->|no| R[Review queue<br/>engineer verdict]
     R -->|becomes a test case| E[Golden eval set]
 ```
 
@@ -58,6 +58,19 @@ The loop is the clearest way to see what an agent is; the graph is what you'd ex
 (parallel tool branches, persistence, human-in-the-loop). `python -m agent.graph --mermaid`
 prints the graph.
 
+## Engineer review queue
+
+An answer that fails a check, hits a limit, describes a possible Departure from Standard or
+comes back with low confidence is put on a review queue (`review/queue.py`, one SQLite file)
+with the reasons it was flagged. An engineer works through the queue in the demo's
+**Review queue** tab, or over REST (`GET /reviews`, `POST /reviews/{id}/verdict`), and
+records one verdict per answer: *approved*, or *corrected* with what the right answer is.
+A verdict is never overwritten, so the queue is also the audit trail.
+
+`uv run python -m review.export` turns the verdicts into golden-set candidates in the layout
+of `evals/golden.yaml`, so each review can become a test case. They're candidates: an
+engineer still edits them and pastes them in.
+
 ## Three ways in: REST, UI, MCP
 
 The same engine (`agent/engine.py`) is served three ways, so what the demo shows is what an
@@ -87,7 +100,7 @@ to `claude_desktop_config.json`:
 | 2. Index | Hybrid vector + keyword index, recall@5 | Done: semantic recall@5 **100%**, MRR 0.83 (20 questions) |
 | 3. RAG | Cited answers or refusal | Done: 9/10 on a first hand-judged check ([evals/rag_check.md](evals/rag_check.md)) |
 | 4. Agent | Tool-calling loop with traces | Built: 11 tools, 6-step loop, JSONL traces; 9/10 first run ([evals/agent_check.md](evals/agent_check.md)). Chart readings are machine-read drafts, flagged for review until an engineer checks them |
-| 5. Human review | Confidence gate and escalation | Escalation flag built; the LangGraph version can pause for review. Review queue not built |
+| 5. Human review | Confidence gate and escalation | Built: flagged answers go to a review queue; an engineer's verdict becomes a golden-set candidate |
 | 6. Evaluation | Golden set, metrics, model comparison | Scorer built (`evals/golden.py`); golden set being written, so no scores yet |
 | 7. Ship | REST API, Streamlit demo | Built: `app/api.py` (`POST /ask`), `app/demo.py` and an MCP server (`app/mcp_server.py`); demo GIF to record |
 
@@ -133,6 +146,7 @@ uv run python -m agent.graph "Superelevation for R = 510 m at 100 kph, rural?" #
 uv run uvicorn app.api:app        # REST API; interactive docs at http://127.0.0.1:8000/docs
 uv run streamlit run app/demo.py  # demo UI
 uv run python -m app.mcp_server   # MCP server (stdio), for other agents
+uv run python -m review.export    # engineer verdicts as golden-set candidates
 ```
 
 ```bash
@@ -150,6 +164,7 @@ ingest/    PDF parsing, clause chunking, chart reading, currency check
 index/     Azure AI Search schema and rebuild
 agent/     RAG pipeline, agent loop and tools
 evals/     Metrics and evaluation runners
+review/    Engineer review queue and verdict export
 app/       REST API (FastAPI), Streamlit demo and MCP server
 scripts/   Azure setup and teardown
 data/      sources.yaml and chart data (PDFs and parsed text are not committed)

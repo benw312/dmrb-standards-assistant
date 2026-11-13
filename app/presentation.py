@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from app.api import AskResponse
+from app.api import AskResponse, review_reasons
 
 STRENGTH_LABELS = {
     "must": "MUST: statutory, no departure possible",
@@ -56,13 +56,10 @@ def status(response: AskResponse) -> Status:
         )
     checked = "All cited clauses were found in the text retrieved"
     if response.needs_human_review:
-        why = ["possible Departure from Standard"] if response.is_departure else []
-        if response.confidence == "low":
-            why.append("low confidence")
         return Status(
             "warning",
             f"{checked}, but the answer is flagged for engineer review.",
-            tuple(why) or ("the model asked for review",),
+            review_reasons(response),
         )
     return Status("success", f"{checked}. Confirm against the standard before relying on it.")
 

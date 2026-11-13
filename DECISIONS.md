@@ -494,3 +494,28 @@ guessing. Each rule cites its GG 101 source.
   the form an engineer can check line by line. It's kept out of `check_chart`'s directory
   (`data/charts/design_speed/`) because it isn't an avoid-the-line chart; the design speed
   tool that uses it waits on three reading rules from Ben (HANDOVER).
+
+## 2026-11-13: engineer review queue (`review/`)
+
+- **What:** an answer that needs an engineer (failed check, limit hit, possible departure,
+  low confidence) is stored with the reasons. The engineer records one verdict: approved, or
+  corrected with what the right answer is. Served in the demo (Review queue tab) and over
+  REST; `ask_dmrb` over MCP queues too, so the three interfaces behave alike.
+- **SQLite, one file:** a single-user tool needs no server. Each operation opens its own
+  connection because the API calls from worker threads. `REVIEW_DB` moves the file.
+- **A verdict is written once.** The update only matches a row with no verdict, so two
+  reviewers can't both win and a later change of mind can't rewrite history. The queue is the
+  audit trail.
+- **Independent of the pipeline, not built on the LangGraph pause.** The queue stores the
+  finished result, so it works for RAG, the loop and the graph alike, and the asker still
+  gets the flagged answer straight away. Pausing the graph would withhold the answer and make
+  callers poll, for one of three pipelines. The pause stays for a deployment that needs it.
+- **A failed queue write doesn't lose the answer.** It's logged and the answer is returned,
+  still flagged.
+- **Verdicts become golden-set candidates** (`review/export.py`), printed for Ben to edit and
+  paste. Nothing writes `evals/golden.yaml`. From a corrected answer only the engineer's note
+  and clauses are used: the requirement strength and departure flag of an answer known to be
+  wrong are left as TODOs.
+- **No authentication:** the reviewer's name is taken on trust, like the rest of the local
+  API. A shared deployment would sign reviewers in and check their role.
+- **Tests never touch the real queue:** `tests/conftest.py` gives every test a temp file.

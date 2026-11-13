@@ -106,7 +106,10 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 
 ### Phase 5 (minimal): single `needs_human_review` flag
 - Escalate on: departure (possible), low confidence, citation check failed, conflicting versions,
-  step limit, out of scope. Note in README that the review queue is future work.
+  step limit, out of scope.
+- [x] [CC] Review queue (SQLite): flagged answers queued with reasons, one verdict each, over
+      REST and in the demo; verdicts export as golden-set candidates (`review/`)
+- [ ] [Ben] Confirm the two verdicts (approved / corrected) and their wording (CLAUDE DRAFT)
 
 ### Phase 6: Evaluation
 - [x] [CC] `evals/golden.py`: citation precision/recall, requirement, departure and refusal
@@ -125,7 +128,7 @@ Legend: **[Ben]** = do yourself, **[CC]** = Claude Code builds it, you review an
 - [ ] [Ben] CV line with the real number; LinkedIn post
 
 ## Later (if time)
-Full Phase 5 SQLite review queue, Container Apps deploy, widen to more standards.
+Container Apps deploy, widen to more standards.
 Done: MCP server (`app/mcp_server.py`, PR #31).
 
 ## Habits
